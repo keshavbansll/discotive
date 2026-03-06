@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const GlobalLoader = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
@@ -8,15 +8,16 @@ const GlobalLoader = ({ onComplete }) => {
     let currentProgress = 0;
 
     const simulateLoading = () => {
-      // Realistic loading jump (only ever moves forward)
-      const jump = Math.floor(Math.random() * 12) + 2;
+      // Realistic loading logic: jumps and stutters
+      const jump =
+        Math.random() > 0.5
+          ? Math.floor(Math.random() * 15) + 5
+          : Math.floor(Math.random() * 3) + 1;
+      currentProgress += jump;
 
-      // Simulate network "hanging" (pauses randomly, but never goes backward)
-      const isPaused =
-        Math.random() > 0.7 && currentProgress > 20 && currentProgress < 85;
-
-      if (!isPaused) {
-        currentProgress += jump;
+      // "Sticking" points (e.g., gets stuck at 85% for a moment)
+      if (currentProgress > 85 && currentProgress < 95 && Math.random() > 0.3) {
+        currentProgress -= jump - 1; // Pull it back slightly to simulate a hang
       }
 
       if (currentProgress >= 100) {
@@ -24,16 +25,14 @@ const GlobalLoader = ({ onComplete }) => {
         setProgress(100);
         setTimeout(() => {
           onComplete(); // Tell the app to unmount the loader
-        }, 500); // Brief pause at 100% before snapping away
+        }, 600); // Brief pause at 100% before fading out
         return;
       }
 
       setProgress(currentProgress);
 
-      // If paused, wait longer before the next tick
-      const nextTick = isPaused
-        ? Math.floor(Math.random() * 400) + 200
-        : Math.floor(Math.random() * 120) + 30;
+      // Randomize the next tick interval to make it feel human/real network
+      const nextTick = Math.floor(Math.random() * 250) + 50;
       setTimeout(simulateLoading, nextTick);
     };
 
@@ -53,17 +52,19 @@ const GlobalLoader = ({ onComplete }) => {
       <div className="w-full max-w-xs flex flex-col items-center gap-6">
         <h1 className="text-3xl font-extrabold tracking-tighter">DISCOTIVE</h1>
 
-        <div className="w-full h-[2px] bg-white/10 rounded-full overflow-hidden relative">
+        {/* Loading Bar Container */}
+        <div className="w-full h-[2px] bg-slate-800 rounded-full overflow-hidden relative">
+          {/* Active Loading Bar */}
           <motion.div
-            className="absolute top-0 left-0 h-full bg-white rounded-full shadow-[0_0_10px_white]"
+            className="absolute top-0 left-0 h-full bg-white rounded-full"
             initial={{ width: "0%" }}
             animate={{ width: `${progress}%` }}
             transition={{ type: "tween", ease: "circOut", duration: 0.2 }}
           />
         </div>
 
-        <p className="text-xs text-slate-500 font-bold tracking-widest uppercase">
-          Booting Core OS... {progress}%
+        <p className="text-xs text-slate-500 font-medium tracking-widest uppercase">
+          Loading Operating System... {progress}%
         </p>
       </div>
     </motion.div>
