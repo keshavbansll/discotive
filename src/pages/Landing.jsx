@@ -374,7 +374,7 @@ const Landing = () => {
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-80 transition-opacity duration-700"
               >
-                <source src="public\stock\Filmmaking.mp4" type="video/mp4" />
+                <source src="\stock\Filmmaking.mp4" type="video/mp4" />
               </video>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent p-8 flex flex-col justify-between z-10">
                 <div className="flex justify-between items-start">
@@ -402,7 +402,7 @@ const Landing = () => {
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-80 transition-opacity duration-700"
               >
-                <source src="public\stock\Startup.mp4" type="video/mp4" />
+                <source src="\stock\Startup.mp4" type="video/mp4" />
               </video>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent p-8 flex flex-col justify-between z-10">
                 <div className="flex justify-between items-start">
@@ -430,7 +430,7 @@ const Landing = () => {
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-80 transition-opacity duration-700"
               >
-                <source src="public\stock\Interview.mp4" type="video/mp4" />
+                <source src="\stock\Interview.mp4" type="video/mp4" />
               </video>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent p-8 flex flex-col justify-between z-10">
                 <div className="flex justify-between items-start">
@@ -716,7 +716,7 @@ const Landing = () => {
             initial={{ scale: 1 }}
             whileInView={{ scale: 1.05 }}
             transition={{ duration: 10, ease: "linear" }}
-            src="public\stock\succession-series-season-4-4k-wallpaper.jpg"
+            src="\stock\succession-series-season-4-4k-wallpaper.jpg"
             alt="Massive Opportunities"
             className="absolute inset-0 w-full h-full object-cover z-0"
           />
