@@ -21,7 +21,6 @@ import {
   TrendingUp,
   Lock,
   Search,
-  Play,
 } from "lucide-react";
 import GlobalLoader from "../components/GlobalLoader";
 import AnimatedButton from "../components/AnimatedButton";
@@ -177,21 +176,21 @@ const Landing = () => {
               <div className="hidden md:flex items-center gap-2">
                 <AnimatedButton
                   variant="nav"
-                  className="bg-white/5 border border-white/10 hover:border-white/20 px-5"
+                  className="bg-white/5 border border-white/10 hover:border-white/20 px-5 cursor-none"
                   onMouseEnter={() => setActiveMenu("features")}
                 >
                   Features
                 </AnimatedButton>
                 <AnimatedButton
                   variant="nav"
-                  className="bg-white/5 border border-white/10 hover:border-white/20 px-5"
+                  className="bg-white/5 border border-white/10 hover:border-white/20 px-5 cursor-none"
                   onMouseEnter={() => setActiveMenu("careers")}
                 >
                   Careers
                 </AnimatedButton>
                 <AnimatedButton
                   variant="nav"
-                  className="bg-white/5 border border-white/10 hover:border-white/20 px-5"
+                  className="bg-white/5 border border-white/10 hover:border-white/20 px-5 cursor-none"
                   href="#hubs"
                   onMouseEnter={() => setActiveMenu(null)}
                 >
@@ -199,7 +198,7 @@ const Landing = () => {
                 </AnimatedButton>
                 <AnimatedButton
                   variant="nav"
-                  className="bg-white/5 border border-white/10 hover:border-white/20 px-5"
+                  className="bg-white/5 border border-white/10 hover:border-white/20 px-5 cursor-none"
                   href="#pricing"
                   onMouseEnter={() => setActiveMenu(null)}
                 >
@@ -210,18 +209,18 @@ const Landing = () => {
 
             <div className="flex items-center gap-4">
               <AnimatedButton
-                to="/app"
+                to="/auth"
                 variant="outline"
-                className="px-6 py-2.5 hidden md:flex"
+                className="px-6 py-2.5 hidden md:flex cursor-none"
                 onMouseEnter={() => setIsHoveringCard(true)}
                 onMouseLeave={() => setIsHoveringCard(false)}
               >
                 Log in
               </AnimatedButton>
               <AnimatedButton
-                to="/app"
+                to="/auth"
                 variant="solid"
-                className="px-6 py-2.5"
+                className="px-6 py-2.5 cursor-none"
                 onMouseEnter={() => setIsHoveringCard(true)}
                 onMouseLeave={() => setIsHoveringCard(false)}
               >
@@ -305,9 +304,9 @@ const Landing = () => {
                 onMouseLeave={() => setIsHoveringCard(false)}
               >
                 <AnimatedButton
-                  to="/app"
+                  to="/auth"
                   variant="solid"
-                  className="px-10 py-4 text-lg w-full sm:w-auto"
+                  className="px-10 py-4 text-lg w-full sm:w-auto cursor-none"
                 >
                   Boot the OS
                 </AnimatedButton>
@@ -326,7 +325,7 @@ const Landing = () => {
             </motion.div>
           </motion.div>
 
-          {/* INFINITE CULTURE MARQUEE (Gen-Z Vibe) */}
+          {/* INFINITE CULTURE MARQUEE */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={isLoaded ? { opacity: 1 } : {}}
@@ -355,7 +354,7 @@ const Landing = () => {
             </motion.div>
           </motion.div>
 
-          {/* Cinematic Video Cards Grid */}
+          {/* Cinematic Video Cards Grid (Lighter contrast bg) */}
           <motion.div
             initial={{ opacity: 0, y: 100 }}
             animate={isLoaded ? { opacity: 1, y: 0 } : {}}
@@ -363,7 +362,7 @@ const Landing = () => {
             className="w-full mt-24 grid grid-cols-1 md:grid-cols-3 gap-6"
           >
             <div
-              className="aspect-[4/5] rounded-3xl bg-[#121212] border border-white/10 overflow-hidden relative group cursor-none shadow-2xl"
+              className="aspect-[4/5] rounded-3xl bg-[#1a1a1a] border border-white/10 overflow-hidden relative group cursor-none shadow-2xl"
               onMouseEnter={() => setIsHoveringCard(true)}
               onMouseLeave={() => setIsHoveringCard(false)}
             >
@@ -374,7 +373,7 @@ const Landing = () => {
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-80 transition-opacity duration-700"
               >
-                <source src="\stock\Filmmaking.mp4" type="video/mp4" />
+                <source src="/stock/Filmmaking.mp4" type="video/mp4" />
               </video>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent p-8 flex flex-col justify-between z-10">
                 <div className="flex justify-between items-start">
@@ -389,9 +388,8 @@ const Landing = () => {
                 </h3>
               </div>
             </div>
-
             <div
-              className="aspect-[4/5] rounded-3xl bg-[#121212] border border-white/10 overflow-hidden relative group cursor-none md:-translate-y-12 shadow-2xl"
+              className="aspect-[4/5] rounded-3xl bg-[#1a1a1a] border border-white/10 overflow-hidden relative group cursor-none md:-translate-y-12 shadow-2xl"
               onMouseEnter={() => setIsHoveringCard(true)}
               onMouseLeave={() => setIsHoveringCard(false)}
             >
@@ -402,7 +400,7 @@ const Landing = () => {
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-80 transition-opacity duration-700"
               >
-                <source src="\stock\Startup.mp4" type="video/mp4" />
+                <source src="/stock/Startup.mp4" type="video/mp4" />
               </video>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent p-8 flex flex-col justify-between z-10">
                 <div className="flex justify-between items-start">
@@ -417,9 +415,8 @@ const Landing = () => {
                 </h3>
               </div>
             </div>
-
             <div
-              className="aspect-[4/5] rounded-3xl bg-[#121212] border border-white/10 overflow-hidden relative group cursor-none shadow-2xl"
+              className="aspect-[4/5] rounded-3xl bg-[#1a1a1a] border border-white/10 overflow-hidden relative group cursor-none shadow-2xl"
               onMouseEnter={() => setIsHoveringCard(true)}
               onMouseLeave={() => setIsHoveringCard(false)}
             >
@@ -430,7 +427,7 @@ const Landing = () => {
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-80 transition-opacity duration-700"
               >
-                <source src="\stock\Interview.mp4" type="video/mp4" />
+                <source src="/stock/Interview.mp4" type="video/mp4" />
               </video>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent p-8 flex flex-col justify-between z-10">
                 <div className="flex justify-between items-start">
@@ -448,7 +445,7 @@ const Landing = () => {
           </motion.div>
         </main>
 
-        {/* SOCIAL & COMMUNITY SECTION (Phone Mockup) */}
+        {/* SOCIAL & COMMUNITY SECTION */}
         <section className="py-32 px-6 max-w-[1400px] mx-auto relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <motion.div
@@ -484,16 +481,14 @@ const Landing = () => {
               </ul>
             </motion.div>
 
-            {/* Animated Phone Mockup */}
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
-              className="relative mx-auto w-full max-w-[320px] aspect-[1/2] bg-[#121212] border-[8px] border-[#222] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col"
+              className="relative mx-auto w-full max-w-[320px] aspect-[1/2] bg-[#1a1a1a] border-[8px] border-[#222] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col"
             >
-              <div className="absolute top-0 inset-x-0 h-6 bg-[#222] rounded-b-3xl w-1/2 mx-auto z-20" />{" "}
-              {/* Dynamic Island */}
+              <div className="absolute top-0 inset-x-0 h-6 bg-[#222] rounded-b-3xl w-1/2 mx-auto z-20" />
               <div className="flex-1 p-4 pt-10 flex flex-col gap-4 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]">
                 <div className="flex items-center gap-3 border-b border-white/10 pb-4">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black font-bold">
@@ -504,13 +499,12 @@ const Landing = () => {
                     <p className="text-[10px] text-slate-400">Founder Track</p>
                   </div>
                 </div>
-                {/* Fake Chat Bubbles animating in */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.3 }}
-                  className="bg-[#222] self-start p-3 rounded-2xl rounded-tl-sm text-sm w-3/4"
+                  className="bg-[#2a2a2a] self-start p-3 rounded-2xl rounded-tl-sm text-sm w-3/4"
                 >
                   How did you secure that UI/UX internship?
                 </motion.div>
@@ -529,7 +523,7 @@ const Landing = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.9 }}
-                  className="bg-[#222] self-start p-3 rounded-2xl rounded-tl-sm text-sm w-3/4 flex items-center gap-2"
+                  className="bg-[#2a2a2a] self-start p-3 rounded-2xl rounded-tl-sm text-sm w-3/4 flex items-center gap-2"
                 >
                   <Layout className="w-4 h-4" /> Attached: Execution Plan
                 </motion.div>
@@ -559,7 +553,7 @@ const Landing = () => {
               <div
                 onMouseEnter={() => setIsHoveringCard(true)}
                 onMouseLeave={() => setIsHoveringCard(false)}
-                className="inline-block"
+                className="inline-block cursor-none"
               >
                 <AnimatedButton
                   variant="solid"
@@ -570,13 +564,12 @@ const Landing = () => {
               </div>
             </motion.div>
 
-            {/* Animated Finance Dashboard Mockup */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
-              className="bg-[#121212] border border-white/10 rounded-3xl p-8 shadow-2xl relative overflow-hidden group"
+              className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-8 shadow-2xl relative overflow-hidden group"
             >
               <div className="absolute top-0 right-0 p-8">
                 <TrendingUp className="w-10 h-10 text-white/20" />
@@ -586,7 +579,6 @@ const Landing = () => {
               </h4>
               <div className="text-5xl font-extrabold mb-8">₹12,40,500</div>
 
-              {/* SVG Line Chart Animation */}
               <div className="w-full h-40 border-b border-l border-white/10 relative">
                 <svg
                   className="absolute inset-0 w-full h-full"
@@ -603,7 +595,6 @@ const Landing = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 2, ease: "easeInOut" }}
                   />
-                  {/* Gradient Fill under line */}
                   <motion.path
                     d="M0 100 L20 80 L40 85 L60 40 L80 50 L100 10 L100 100 Z"
                     fill="url(#gradient)"
@@ -624,9 +615,8 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* VALUE PROPOSITION: The Arsenal (Main Character Energy) */}
+        {/* MAIN CHARACTER ENERGY */}
         <section className="py-32 bg-[#050505] text-white px-6 border-y border-white/5 relative z-10 overflow-hidden">
-          {/* Subtle Pop-Culture Aura Effect (AOT Paths/Energy) behind text */}
           <div className="absolute top-1/2 left-1/4 w-[800px] h-[800px] bg-red-600/10 blur-[150px] rounded-full -translate-y-1/2 -translate-x-1/2 pointer-events-none animate-pulse" />
 
           <div className="max-w-[1400px] mx-auto relative z-10">
@@ -649,10 +639,9 @@ const Landing = () => {
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Feature 1: INTERACTIVE FULLY CLICKABLE CAREER ENGINE BOX */}
               <Link
-                to="/app"
-                className="bg-[#121212] rounded-3xl p-10 border border-white/5 group hover:border-white/20 hover:shadow-[0_0_50px_rgba(255,255,255,0.05)] transition-all duration-500 relative overflow-hidden block cursor-none"
+                to="/auth"
+                className="bg-[#1a1a1a] rounded-3xl p-10 border border-white/10 group hover:border-white/20 hover:shadow-[0_0_50px_rgba(255,255,255,0.05)] transition-all duration-500 relative overflow-hidden block cursor-none"
                 onMouseEnter={() => setIsHoveringCard(true)}
                 onMouseLeave={() => setIsHoveringCard(false)}
               >
@@ -675,10 +664,9 @@ const Landing = () => {
                 </div>
               </Link>
 
-              {/* Feature 2: The Score */}
               <Link
-                to="/app"
-                className="bg-[#121212] rounded-3xl p-10 border border-white/5 group hover:border-white/20 hover:shadow-[0_0_50px_rgba(255,255,255,0.05)] transition-all duration-500 relative overflow-hidden block cursor-none"
+                to="/auth"
+                className="bg-[#1a1a1a] rounded-3xl p-10 border border-white/10 group hover:border-white/20 hover:shadow-[0_0_50px_rgba(255,255,255,0.05)] transition-all duration-500 relative overflow-hidden block cursor-none"
                 onMouseEnter={() => setIsHoveringCard(true)}
                 onMouseLeave={() => setIsHoveringCard(false)}
               >
@@ -693,7 +681,7 @@ const Landing = () => {
                   <p className="text-slate-400 text-lg mb-8 leading-relaxed">
                     A proprietary algorithm that calculates your exact placement
                     readiness based on skills, consistency, and network. Let our
-                    AI match you with the exact opportunities you deserve.
+                    AI match you with the opportunities you deserve.
                   </p>
                   <div className="inline-flex items-center gap-2 text-white font-bold group-hover:gap-4 transition-all">
                     Calculate your score <ChevronRight className="w-5 h-5" />
@@ -704,19 +692,18 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* CINEMATIC QUOTE / OPPORTUNITIES IMAGE */}
+        {/* CINEMATIC QUOTE */}
         <section
           className="relative h-[80vh] w-full flex items-center justify-center overflow-hidden z-10"
           onMouseEnter={() => setIsHoveringCard(true)}
           onMouseLeave={() => setIsHoveringCard(false)}
         >
           <div className="absolute inset-0 bg-black z-10 opacity-40"></div>
-          {/* Using a high-quality abstract/cinematic placeholder image */}
           <motion.img
             initial={{ scale: 1 }}
             whileInView={{ scale: 1.05 }}
             transition={{ duration: 10, ease: "linear" }}
-            src="\stock\succession-series-season-4-4k-wallpaper.jpg"
+            src="/stock/succession-series-season-4-4k-wallpaper.jpg"
             alt="Massive Opportunities"
             className="absolute inset-0 w-full h-full object-cover z-0"
           />
@@ -731,51 +718,109 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* INLINE AUTH / "YOUR WORLD TO CREATE" BLOCK */}
-        <section className="py-32 px-6 max-w-[1400px] mx-auto relative z-10">
+        {/* MEET THE BOARD */}
+        <section className="py-20 px-6 max-w-[1400px] mx-auto relative z-10 border-t border-white/5 overflow-hidden">
+          {/* Ambient Blue Background Glow */}
+          <div className="absolute top-1/2 left-1/2 w-[700px] h-[500px] bg-blue-600/10 blur-[150px] rounded-full -translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
           <div
-            className="bg-white rounded-[3rem] p-12 md:p-20 text-center max-w-2xl mx-auto shadow-2xl text-black"
+            className="text-center mb-12 relative z-10"
             onMouseEnter={() => setIsHoveringCard(true)}
             onMouseLeave={() => setIsHoveringCard(false)}
           >
-            <div className="w-16 h-16 bg-black text-white rounded-2xl flex items-center justify-center text-3xl font-extrabold mx-auto mb-8 shadow-xl">
-              D
-            </div>
-            <h2 className="text-4xl font-extrabold tracking-tighter mb-8">
-              Start your legacy.
+            <h2 className="text-5xl md:text-6xl font-extrabold tracking-tighter mb-4">
+              Meet the board.
             </h2>
-            <div className="flex flex-col gap-4">
-              <AnimatedButton
-                to="/app"
-                variant="solid"
-                className="w-full py-5 text-lg shadow-lg border border-black cursor-none"
-              >
-                Get Started Free
-              </AnimatedButton>
-              <div className="text-sm font-bold text-slate-500 mt-4">
-                Already have an account?{" "}
-                <Link
-                  to="/app"
-                  className="text-black underline hover:text-slate-600 transition-colors"
-                >
-                  Log in
-                </Link>
-              </div>
+            <p className="text-xl text-slate-400 font-medium">
+              The architects building the Discotive ecosystem.
+            </p>
+          </div>
+
+          {/* Card Stack Container */}
+          <div
+            className="relative max-w-6xl mx-auto flex justify-center items-center h-auto py-10"
+            onMouseEnter={() => setIsHoveringCard(true)}
+            onMouseLeave={() => setIsHoveringCard(false)}
+          >
+            {/* Background Left Translucent Slot */}
+            <div className="absolute left-2 md:left-8 w-[45%] h-[200px] md:h-[260px] bg-white/10 backdrop-blur-md border border-white/20 rounded-[2.5rem] z-0 flex items-center justify-start pl-10 opacity-70 transition-transform duration-500 hover:-translate-x-4">
+              <span className="text-white/40 font-bold tracking-widest uppercase text-sm -rotate-90 md:rotate-0 whitespace-nowrap">
+                Seat 02
+              </span>
             </div>
-            <div className="flex items-center justify-center gap-4 mt-12">
-              <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors text-black">
-                <span className="text-xs font-bold">Google Play</span>
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors text-black">
-                <span className="text-xs font-bold">App Store</span>
-              </button>
+
+            {/* Background Right Translucent Slot */}
+            <div className="absolute right-2 md:right-8 w-[45%] h-[200px] md:h-[260px] bg-white/5 backdrop-blur-md border border-white/10 rounded-[2.5rem] z-0 flex items-center justify-end pr-10 opacity-50 transition-transform duration-500 hover:translate-x-4">
+              <span className="text-white/30 font-bold tracking-widest uppercase text-sm rotate-90 md:rotate-0 whitespace-nowrap">
+                Seat 03
+              </span>
+            </div>
+
+            {/* Foreground Main Card (Light Theme, Centered) */}
+            <div className="relative w-[90%] md:w-[75%] bg-[#f4f4f5] text-black rounded-[2.5rem] p-8 md:p-12 z-20 shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/30 flex flex-col md:flex-row items-center md:items-start gap-8 group transition-transform duration-500 hover:-translate-y-2 cursor-none">
+              {/* Profile Image */}
+              <div className="w-32 h-32 md:w-48 md:h-48 shrink-0 rounded-[1.5rem] overflow-hidden bg-zinc-300 border-4 border-white shadow-xl relative">
+                <img
+                  src="stock/Keshav-Bansal.jpeg"
+                  alt="Founder"
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                />
+              </div>
+
+              {/* Details */}
+              <div className="flex-1 text-center md:text-left flex flex-col justify-center h-full pt-2">
+                <h3 className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-2 text-black">
+                  Keshav Bansal
+                </h3>
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-8">
+                  Founder & Architect
+                </p>
+
+                <div className="flex flex-col md:flex-row gap-8 md:gap-16">
+                  {/* Socials */}
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+                      Social Profiles
+                    </p>
+                    <div className="flex items-center justify-center md:justify-start gap-3">
+                      <a
+                        href="https://www.instagram.com/keshavbansll/"
+                        className="w-12 h-12 rounded-full bg-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-colors text-black"
+                      >
+                        <Instagram className="w-5 h-5" />
+                      </a>
+                      <a
+                        href="https://www.linkedin.com/in/keshavbansll/"
+                        className="w-12 h-12 rounded-full bg-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-colors text-black"
+                      >
+                        <Linkedin className="w-5 h-5" />
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="hidden md:block w-px h-16 bg-black/10" />
+
+                  {/* Contact */}
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+                      Direct Contact
+                    </p>
+                    <a
+                      href="mailto:founder@discotive.com"
+                      className="text-lg font-bold text-black hover:underline decoration-2 underline-offset-4"
+                    >
+                      officialkeshavbansal@gmail.com
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         {/* FREEMIUM / UPGRADE TEASER */}
-        <section className="py-20 px-6 max-w-[1400px] mx-auto flex flex-col items-center text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white text-sm font-bold tracking-widest uppercase mb-8">
+        <section className="py-20 px-6 max-w-[1400px] mx-auto flex flex-col items-center text-center relative z-10 border-t border-white/5">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white text-sm font-bold tracking-widest uppercase mb-8 mt-12">
             <Zap className="w-4 h-4 text-white" /> Discotive Pro
           </div>
           <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter leading-tight mb-8">
@@ -788,14 +833,23 @@ const Landing = () => {
             predictive placement AI, unlimited roadmap dependencies, and VIP
             access to physical Campus Hubs.
           </p>
+
           <div
+            className="flex flex-col sm:flex-row gap-4"
             onMouseEnter={() => setIsHoveringCard(true)}
             onMouseLeave={() => setIsHoveringCard(false)}
           >
             <AnimatedButton
-              to="/app"
+              to="/auth"
               variant="solid"
               className="px-10 py-5 text-lg shadow-[0_0_40px_rgba(255,255,255,0.2)] cursor-none"
+            >
+              Get Started Free
+            </AnimatedButton>
+            <AnimatedButton
+              to="/auth"
+              variant="outline"
+              className="px-10 py-5 text-lg cursor-none text-slate-300 border-slate-700 hover:text-white hover:border-white"
             >
               Upgrade to Pro — ₹499/mo
             </AnimatedButton>
@@ -810,27 +864,42 @@ const Landing = () => {
                 <h4 className="font-bold text-white mb-6">Careers</h4>
                 <ul className="space-y-4 text-sm text-slate-400 font-medium">
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Software Engineers
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Filmmakers & Directors
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Founders & PMs
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Content Creators
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       UI/UX Designers
                     </a>
                   </li>
@@ -840,33 +909,35 @@ const Landing = () => {
                 <h4 className="font-bold text-white mb-6">Features</h4>
                 <ul className="space-y-4 text-sm text-slate-400 font-medium">
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       The Career Engine
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Discotive Score
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Algorithmic Matchmaking
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Execution Journal
-                    </a>
-                  </li>
-                  <li className="pl-4 border-l border-white/10">
-                    <a href="#" className="hover:text-white transition-colors">
-                      Join a Campus Hub
-                    </a>
-                  </li>
-                  <li className="pl-4 border-l border-white/10">
-                    <a href="#" className="hover:text-white transition-colors">
-                      Become a Mentor
                     </a>
                   </li>
                 </ul>
@@ -875,17 +946,26 @@ const Landing = () => {
                 <h4 className="font-bold text-white mb-6">Pricing</h4>
                 <ul className="space-y-4 text-sm text-slate-400 font-medium">
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Basic OS is Free
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Discotive Pro
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Campus Hub Passes
                     </a>
                   </li>
@@ -895,28 +975,19 @@ const Landing = () => {
                 <h4 className="font-bold text-white mb-6">Resources</h4>
                 <ul className="space-y-4 text-sm text-slate-400 font-medium">
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       OS Documentation
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
-                      Newsroom
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Help Center & FAQ
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:text-white transition-colors">
-                      Partner Directory
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:text-white transition-colors">
-                      Mobile App
                     </a>
                   </li>
                 </ul>
@@ -925,27 +996,18 @@ const Landing = () => {
                 <h4 className="font-bold text-white mb-6">Company</h4>
                 <ul className="space-y-4 text-sm text-slate-400 font-medium">
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       About Us
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white transition-colors">
-                      Press
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:text-white transition-colors">
-                      Careers
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:text-white transition-colors">
-                      Terms of Use & Policies
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:text-white transition-colors">
+                    <a
+                      href="#"
+                      className="hover:text-white transition-colors cursor-none"
+                    >
                       Privacy Policy
                     </a>
                   </li>
@@ -953,34 +1015,15 @@ const Landing = () => {
               </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row items-center justify-between pt-8 border-t border-white/10 gap-8">
-              <div
-                className="flex items-center gap-4"
-                onMouseEnter={() => setIsHoveringCard(true)}
-                onMouseLeave={() => setIsHoveringCard(false)}
-              >
-                <button className="flex items-center gap-2 px-4 py-2 bg-[#121212] border border-white/10 rounded-lg hover:bg-white/5 transition-colors cursor-none">
-                  <span className="text-xs font-bold">Google Play</span>
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-[#121212] border border-white/10 rounded-lg hover:bg-white/5 transition-colors cursor-none">
-                  <span className="text-xs font-bold">App Store</span>
-                </button>
+            <div
+              className="flex flex-col lg:flex-row items-center justify-between pt-8 border-t border-white/10 gap-8"
+              onMouseEnter={() => setIsHoveringCard(true)}
+              onMouseLeave={() => setIsHoveringCard(false)}
+            >
+              <div className="text-center md:text-left text-xs text-slate-600 font-medium">
+                © 2026 Discotive Hubs. Built in Jaipur, Rajasthan.
               </div>
-
-              <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
-                <button className="flex items-center gap-2 px-4 py-2 bg-[#121212] border border-white/10 rounded-full text-sm font-bold hover:bg-white/5 transition-colors">
-                  <Globe className="w-4 h-4" /> English (United States)
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-[#121212] border border-white/10 rounded-full text-sm font-bold hover:bg-white/5 transition-colors">
-                  <MapPin className="w-4 h-4" /> India (भारत)
-                </button>
-              </div>
-
-              <div
-                className="flex items-center gap-6 text-slate-400"
-                onMouseEnter={() => setIsHoveringCard(true)}
-                onMouseLeave={() => setIsHoveringCard(false)}
-              >
+              <div className="flex items-center gap-6 text-slate-400">
                 <a
                   href="#"
                   className="hover:text-white transition-colors cursor-none"
@@ -1006,10 +1049,6 @@ const Landing = () => {
                   <Linkedin className="w-5 h-5" />
                 </a>
               </div>
-            </div>
-
-            <div className="text-center mt-12 text-xs text-slate-600 font-medium">
-              © 2026 Discotive Hubs. Built in Jaipur, Rajasthan.
             </div>
           </div>
         </footer>

@@ -1,42 +1,14 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
 
 const GlobalLoader = ({ onComplete }) => {
-  const [progress, setProgress] = useState(0);
-
+  // Simulate the OS boot time (2 seconds) before revealing the site
   useEffect(() => {
-    let currentProgress = 0;
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 2000);
 
-    const simulateLoading = () => {
-      // Realistic loading logic: jumps and stutters
-      const jump =
-        Math.random() > 0.5
-          ? Math.floor(Math.random() * 15) + 5
-          : Math.floor(Math.random() * 3) + 1;
-      currentProgress += jump;
-
-      // "Sticking" points (e.g., gets stuck at 85% for a moment)
-      if (currentProgress > 85 && currentProgress < 95 && Math.random() > 0.3) {
-        currentProgress -= jump - 1; // Pull it back slightly to simulate a hang
-      }
-
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        setProgress(100);
-        setTimeout(() => {
-          onComplete(); // Tell the app to unmount the loader
-        }, 600); // Brief pause at 100% before fading out
-        return;
-      }
-
-      setProgress(currentProgress);
-
-      // Randomize the next tick interval to make it feel human/real network
-      const nextTick = Math.floor(Math.random() * 250) + 50;
-      setTimeout(simulateLoading, nextTick);
-    };
-
-    setTimeout(simulateLoading, 200);
+    return () => clearTimeout(timer);
   }, [onComplete]);
 
   return (
@@ -49,22 +21,45 @@ const GlobalLoader = ({ onComplete }) => {
       }}
       className="fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col items-center justify-center text-white"
     >
-      <div className="w-full max-w-xs flex flex-col items-center gap-6">
+      <div className="flex flex-col items-center gap-8">
+        {/* Brand Name */}
         <h1 className="text-3xl font-extrabold tracking-tighter">DISCOTIVE</h1>
 
-        {/* Loading Bar Container */}
-        <div className="w-full h-[2px] bg-slate-800 rounded-full overflow-hidden relative">
-          {/* Active Loading Bar */}
-          <motion.div
-            className="absolute top-0 left-0 h-full bg-white rounded-full"
-            initial={{ width: "0%" }}
-            animate={{ width: `${progress}%` }}
-            transition={{ type: "tween", ease: "circOut", duration: 0.2 }}
-          />
-        </div>
+        {/* Constantly Rotating Circular Loader */}
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          className="relative flex items-center justify-center w-12 h-12"
+        >
+          <svg className="w-full h-full" viewBox="0 0 50 50">
+            {/* Dark background track */}
+            <circle
+              cx="25"
+              cy="25"
+              r="20"
+              stroke="rgba(255, 255, 255, 0.05)"
+              strokeWidth="4"
+              fill="none"
+            />
+            {/* White glowing spinner */}
+            <circle
+              cx="25"
+              cy="25"
+              r="20"
+              stroke="#ffffff"
+              strokeWidth="4"
+              fill="none"
+              strokeDasharray="125"
+              strokeDashoffset="90"
+              strokeLinecap="round"
+              className="drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+            />
+          </svg>
+        </motion.div>
 
-        <p className="text-xs text-slate-500 font-medium tracking-widest uppercase">
-          Loading Operating System... {progress}%
+        {/* Minimal Subtext */}
+        <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mt-[-10px]">
+          Booting Core OS
         </p>
       </div>
     </motion.div>
