@@ -168,8 +168,13 @@ const Landing = () => {
           onMouseLeave={() => setActiveMenu(null)}
         >
           <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
-            <div className="flex items-center gap-10">
-              <span className="text-2xl font-extrabold tracking-tighter">
+            <div className="flex items-center gap-0">
+              <img
+                src="/logo.png"
+                alt="Discotive Logo"
+                className="h-8 md:h-10 w-auto object-contain hover:scale-105 transition-transform duration-300"
+              />
+              <span className="text-2xl font-extrabold tracking-tighter mr-10">
                 DISCOTIVE
               </span>
 

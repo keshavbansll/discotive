@@ -191,9 +191,11 @@ const MainLayout = () => {
             to="/app"
             className="flex items-center gap-3 overflow-hidden whitespace-nowrap group"
           >
-            <div className="w-10 h-10 shrink-0 bg-white rounded-xl flex items-center justify-center text-black font-extrabold text-xl shadow-[0_0_15px_rgba(255,255,255,0.2)] group-hover:scale-105 transition-transform">
-              D
-            </div>
+            <img
+              src="/logo.png"
+              alt="Discotive Engine"
+              className="w-7 h-7 object-contain"
+            />
             <div
               className={cn(
                 "transition-opacity duration-300",
