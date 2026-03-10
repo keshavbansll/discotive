@@ -724,16 +724,16 @@ const Landing = () => {
         </section>
 
         {/* MEET THE BOARD */}
-        <section className="py-20 px-6 max-w-[1400px] mx-auto relative z-10 border-t border-white/5 overflow-hidden">
-          {/* Ambient Blue Background Glow */}
+        <section className="py-24 px-6 relative z-10 border-t border-white/5 overflow-hidden bg-[#050505]">
+          {/* Ambient Background Glow */}
           <div className="absolute top-1/2 left-1/2 w-[700px] h-[500px] bg-blue-600/10 blur-[150px] rounded-full -translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
           <div
-            className="text-center mb-12 relative z-10"
+            className="text-center mb-16 relative z-10 max-w-2xl mx-auto"
             onMouseEnter={() => setIsHoveringCard(true)}
             onMouseLeave={() => setIsHoveringCard(false)}
           >
-            <h2 className="text-5xl md:text-6xl font-extrabold tracking-tighter mb-4">
+            <h2 className="text-5xl md:text-6xl font-extrabold tracking-tighter mb-4 text-white">
               Meet the board.
             </h2>
             <p className="text-xl text-slate-400 font-medium">
@@ -741,80 +741,115 @@ const Landing = () => {
             </p>
           </div>
 
-          {/* Card Stack Container */}
+          {/* Two-Card Grid */}
           <div
-            className="relative max-w-6xl mx-auto flex justify-center items-center h-auto py-10"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-7xl mx-auto relative z-20"
             onMouseEnter={() => setIsHoveringCard(true)}
             onMouseLeave={() => setIsHoveringCard(false)}
           >
-            {/* Background Left Translucent Slot */}
-            <div className="absolute left-2 md:left-8 w-[45%] h-[200px] md:h-[260px] bg-white/10 backdrop-blur-md border border-white/20 rounded-[2.5rem] z-0 flex items-center justify-start pl-10 opacity-70 transition-transform duration-500 hover:-translate-x-4">
-              <span className="text-white/40 font-bold tracking-widest uppercase text-sm -rotate-90 md:rotate-0 whitespace-nowrap">
-                Seat 02
-              </span>
-            </div>
-
-            {/* Background Right Translucent Slot */}
-            <div className="absolute right-2 md:right-8 w-[45%] h-[200px] md:h-[260px] bg-white/5 backdrop-blur-md border border-white/10 rounded-[2.5rem] z-0 flex items-center justify-end pr-10 opacity-50 transition-transform duration-500 hover:translate-x-4">
-              <span className="text-white/30 font-bold tracking-widest uppercase text-sm rotate-90 md:rotate-0 whitespace-nowrap">
-                Seat 03
-              </span>
-            </div>
-
-            {/* Foreground Main Card (Light Theme, Centered) */}
-            <div className="relative w-[90%] md:w-[75%] bg-[#f4f4f5] text-black rounded-[2.5rem] p-8 md:p-12 z-20 shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/30 flex flex-col md:flex-row items-center md:items-start gap-8 group transition-transform duration-500 hover:-translate-y-2 cursor-none">
-              {/* Profile Image */}
-              <div className="w-32 h-32 md:w-48 md:h-48 shrink-0 rounded-[1.5rem] overflow-hidden bg-zinc-300 border-4 border-white shadow-xl relative">
+            {/* Card 1: Keshav Bansal */}
+            <div className="bg-[#f4f4f5] text-black rounded-[2.5rem] p-8 lg:p-10 shadow-[0_30px_80px_rgba(0,0,0,0.8)] flex flex-col sm:flex-row items-center sm:items-start gap-8 group transition-transform duration-500 hover:-translate-y-2 cursor-none">
+              <div className="w-32 h-32 sm:w-40 sm:h-40 shrink-0 rounded-[1.5rem] overflow-hidden bg-zinc-300 border-4 border-white shadow-xl relative">
                 <img
-                  src="stock/Keshav-Bansal.jpeg"
-                  alt="Founder"
+                  src="/stock/Keshav-Bansal.jpeg"
+                  alt="Keshav Bansal"
                   className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
                 />
               </div>
-
-              {/* Details */}
-              <div className="flex-1 text-center md:text-left flex flex-col justify-center h-full pt-2">
-                <h3 className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-2 text-black">
+              <div className="flex-1 text-center sm:text-left flex flex-col justify-center h-full pt-2">
+                <h3 className="text-3xl sm:text-4xl font-extrabold tracking-tighter mb-1 text-black">
                   Keshav Bansal
                 </h3>
-                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-8">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">
                   Founder & CEO
                 </p>
 
-                <div className="flex flex-col md:flex-row gap-8 md:gap-16">
-                  {/* Socials */}
+                <div className="flex flex-col gap-5 mt-auto">
                   <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
                       Social Profiles
                     </p>
-                    <div className="flex items-center justify-center md:justify-start gap-3">
+                    <div className="flex items-center justify-center sm:justify-start gap-3">
                       <a
                         href="https://www.instagram.com/keshavbansll/"
-                        className="w-12 h-12 rounded-full bg-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-colors text-black"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-colors text-black"
                       >
-                        <Instagram className="w-5 h-5" />
+                        <Instagram className="w-4 h-4" />
                       </a>
                       <a
                         href="https://www.linkedin.com/in/keshavbansll/"
-                        className="w-12 h-12 rounded-full bg-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-colors text-black"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-colors text-black"
                       >
-                        <Linkedin className="w-5 h-5" />
+                        <Linkedin className="w-4 h-4" />
                       </a>
                     </div>
                   </div>
-
-                  <div className="hidden md:block w-px h-16 bg-black/10" />
-
-                  {/* Contact */}
                   <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                       Direct Contact
                     </p>
                     <a
-                      href="mailto:founder@discotive.com"
-                      className="text-lg font-bold text-black hover:underline decoration-2 underline-offset-4"
+                      href="mailto:officialkeshavbansal@gmail.com"
+                      className="text-sm font-bold text-black hover:underline decoration-2 underline-offset-4 break-all"
                     >
                       officialkeshavbansal@gmail.com
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Reshmi Kumari */}
+            <div className="bg-[#f4f4f5] text-black rounded-[2.5rem] p-8 lg:p-10 shadow-[0_30px_80px_rgba(0,0,0,0.8)] flex flex-col sm:flex-row items-center sm:items-start gap-8 group transition-transform duration-500 hover:-translate-y-2 cursor-none">
+              <div className="w-32 h-32 sm:w-40 sm:h-40 shrink-0 rounded-[1.5rem] overflow-hidden bg-zinc-300 border-4 border-white shadow-xl relative">
+                {/* Replace src with Reshmi's actual photo path if you have one */}
+                <img
+                  src="/stock/Reshmi-Kumari.jpeg"
+                  alt="Reshmi Kumari"
+                  onError={(e) => {
+                    e.target.src =
+                      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=600&auto=format&fit=crop";
+                  }} // Fallback if image not found
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                />
+              </div>
+              <div className="flex-1 text-center sm:text-left flex flex-col justify-center h-full pt-2">
+                <h3 className="text-3xl sm:text-4xl font-extrabold tracking-tighter mb-1 text-black">
+                  Reshmi Kumari
+                </h3>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">
+                  Co-Founder & Digital Marketing Head
+                </p>
+
+                <div className="flex flex-col gap-5 mt-auto">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                      Social Profiles
+                    </p>
+                    <div className="flex items-center justify-center sm:justify-start gap-3">
+                      <a
+                        href="https://www.linkedin.com/in/reshmi-kumari-330891384"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-colors text-black"
+                      >
+                        <Linkedin className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                      Direct Contact
+                    </p>
+                    <a
+                      href="mailto:reshmikri227@gmail.com"
+                      className="text-sm font-bold text-black hover:underline decoration-2 underline-offset-4 break-all"
+                    >
+                      reshmikri227@gmail.com
                     </a>
                   </div>
                 </div>
@@ -856,7 +891,7 @@ const Landing = () => {
               variant="outline"
               className="px-10 py-5 text-lg cursor-none text-slate-300 border-slate-700 hover:text-white hover:border-white"
             >
-              Upgrade to Pro — ₹499/mo
+              Upgrade to Pro — ₹299/mo
             </AnimatedButton>
           </div>
         </section>
