@@ -811,8 +811,7 @@ const Landing = () => {
                   src="/stock/Reshmi-Kumari.jpeg"
                   alt="Reshmi Kumari"
                   onError={(e) => {
-                    e.target.src =
-                      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=600&auto=format&fit=crop";
+                    e.target.src = "/stock/Reshmi Kumari.jpg";
                   }} // Fallback if image not found
                   className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
                 />
