@@ -891,7 +891,7 @@ const Landing = () => {
               variant="outline"
               className="px-10 py-5 text-lg cursor-none text-slate-300 border-slate-700 hover:text-white hover:border-white"
             >
-              Upgrade to Pro — ₹299/mo
+              Upgrade to Pro — ₹199/mo
             </AnimatedButton>
           </div>
         </section>
