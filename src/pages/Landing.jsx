@@ -1035,12 +1035,14 @@ const Landing = () => {
                 <h4 className="font-bold text-white mb-6">Company</h4>
                 <ul className="space-y-4 text-sm text-slate-400 font-medium">
                   <li>
-                    <a
-                      href="#"
+                    <Link
+                      to="/about"
                       className="hover:text-white transition-colors cursor-none"
+                      onMouseEnter={() => setIsHoveringCard(true)}
+                      onMouseLeave={() => setIsHoveringCard(false)}
                     >
                       About Us
-                    </a>
+                    </Link>
                   </li>
                   <li>
                     <a

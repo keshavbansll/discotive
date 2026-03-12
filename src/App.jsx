@@ -16,6 +16,7 @@ import Vault from "./pages/Vault";
 import Hubs from "./pages/Hubs";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import About from "./pages/About";
 
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
@@ -64,6 +65,8 @@ function App() {
             }
           />
 
+          <Route path="/about" element={<About />} />
+
           <Route
             path="/app"
             element={
@@ -80,6 +83,7 @@ function App() {
             <Route path="hubs" element={<Hubs />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
+
             <Route
               path="finance"
               element={<ComingSoon title="Financial Ledger" />}
