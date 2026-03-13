@@ -212,7 +212,7 @@ const MainLayout = () => {
           </Link>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden">
           <div className="space-y-1">
             {topNavItems.map((item) => (
               <NavItem key={item.path} item={item} />

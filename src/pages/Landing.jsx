@@ -66,7 +66,14 @@ const ParticleBackground = () => {
 // MAIN PAGE COMPONENT
 // ----------------------------------------------------------------------
 const Landing = () => {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(() => {
+    return sessionStorage.getItem("discotive_booted") === "true";
+  });
+
+  const handleLoadComplete = () => {
+    sessionStorage.setItem("discotive_booted", "true");
+    setIsLoaded(true);
+  };
   const [activeMenu, setActiveMenu] = useState(null);
 
   // Custom Cursor State
@@ -139,7 +146,7 @@ const Landing = () => {
 
   return (
     <>
-      {!isLoaded && <GlobalLoader onComplete={() => setIsLoaded(true)} />}
+      {!isLoaded && <GlobalLoader onComplete={handleLoadComplete} />}
 
       <div
         className={`min-h-screen bg-[#0a0a0a] text-white selection:bg-white selection:text-black transition-opacity duration-1000 overflow-hidden relative ${isLoaded ? "opacity-100" : "opacity-0"}`}
@@ -170,7 +177,7 @@ const Landing = () => {
           <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
             <div className="flex items-center gap-0">
               <img
-                src="/logo.png"
+                src="/logox.png"
                 alt="Discotive Logo"
                 className="h-8 md:h-10 w-auto object-contain hover:scale-105 transition-transform duration-300"
               />

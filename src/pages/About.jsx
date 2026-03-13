@@ -58,7 +58,14 @@ const ParticleBackground = () => {
 };
 
 const About = () => {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(() => {
+    return sessionStorage.getItem("discotive_booted") === "true";
+  });
+
+  const handleLoadComplete = () => {
+    sessionStorage.setItem("discotive_booted", "true");
+    setIsLoaded(true);
+  };
   const [activeMenu, setActiveMenu] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: -100, y: -100 });
   const [isHoveringCard, setIsHoveringCard] = useState(false);
@@ -129,7 +136,7 @@ const About = () => {
 
   return (
     <>
-      {!isLoaded && <GlobalLoader onComplete={() => setIsLoaded(true)} />}
+      {!isLoaded && <GlobalLoader onComplete={handleLoadComplete} />}
 
       <div
         className={`min-h-screen bg-[#0a0a0a] text-white selection:bg-white selection:text-black transition-opacity duration-1000 overflow-hidden relative ${isLoaded ? "opacity-100" : "opacity-0"}`}
