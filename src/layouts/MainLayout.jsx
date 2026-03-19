@@ -192,8 +192,8 @@ const MainLayout = () => {
             className="flex items-center gap-3 overflow-hidden whitespace-nowrap group"
           >
             <img
-              src="/logo.png"
-              alt="Discotive Engine"
+              src="/logo-no-bg-white.png"
+              alt="Discotive"
               className="w-7 h-7 object-contain"
             />
             <div
@@ -206,7 +206,7 @@ const MainLayout = () => {
                 DISCOTIVE
               </h1>
               <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
-                Operating System
+                Career Engine
               </p>
             </div>
           </Link>

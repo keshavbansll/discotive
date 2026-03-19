@@ -17,6 +17,8 @@ import Hubs from "./pages/Hubs";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import About from "./pages/About";
+import Network from "./pages/Network";
+import PublicProfile from "./pages/PublicProfile";
 
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
@@ -78,17 +80,21 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="roadmap" element={<Roadmap />} />
             <Route path="leaderboard" element={<Leaderboard />} />
-            <Route path="opportunities" element={<Opportunities />} />
+            <Route
+              path="opportunities"
+              element={<ComingSoon title="Opportunities" />}
+            />
             <Route path="vault" element={<Vault />} />
-            <Route path="hubs" element={<Hubs />} />
+            <Route path="hubs" element={<ComingSoon title="Hubs" />} />
             <Route path="profile" element={<Profile />} />
+
             <Route path="settings" element={<Settings />} />
 
             <Route
               path="finance"
               element={<ComingSoon title="Financial Ledger" />}
             />
-            <Route path="network" element={<ComingSoon title="Network" />} />
+            <Route path="network" element={<Network />} />
             <Route path="learn" element={<ComingSoon title="learn" />} />
 
             <Route
@@ -101,6 +107,7 @@ function App() {
             />
             <Route path="discover" element={<ComingSoon title="Discover" />} />
           </Route>
+          <Route path="/:username" element={<PublicProfile />} />
         </Routes>
       </Router>
     </AuthProvider>

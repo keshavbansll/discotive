@@ -400,6 +400,10 @@ const Auth = () => {
   const [username, setUsername] = useState("");
   const [usernameAvailable, setUsernameAvailable] = useState(null); // true/false/null
 
+  // New Location States
+  const [userState, setUserState] = useState("");
+  const [country, setCountry] = useState("");
+
   const [contact, setContact] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
 
@@ -485,8 +489,17 @@ const Auth = () => {
   // --- HANDLERS ---
   const handleSignUpStep1 = async (e) => {
     e.preventDefault();
-    if (!email || !password || !firstName || !lastName || !username)
-      return setError("Identity fields are required.");
+    if (
+      !email ||
+      !password ||
+      !firstName ||
+      !lastName ||
+      !username ||
+      !userState ||
+      !country
+    ) {
+      return setError("Identity and location fields are required.");
+    }
     if (pwScore < 2)
       return setError("Password is too weak. Add numbers or symbols.");
     if (usernameAvailable === false)
@@ -599,6 +612,11 @@ const Auth = () => {
           email,
           username: username.toLowerCase(),
         },
+        location: {
+          state: userState,
+          country,
+          displayLocation: `${userState}, ${country}`,
+        },
         baseline: {
           currentStatus,
           institution,
@@ -673,7 +691,7 @@ const Auth = () => {
             className="flex items-center gap-3 mb-16 hover:opacity-80 transition-opacity w-fit"
           >
             <img
-              src="/logox.png"
+              src="/logo.png"
               alt="Discotive"
               className="h-10 w-auto object-contain"
             />
@@ -714,7 +732,7 @@ const Auth = () => {
       <div className="w-full md:w-7/12 flex items-center justify-center p-6 md:p-12 relative overflow-y-auto custom-scrollbar bg-[#0a0a0a]">
         <div className="w-full max-w-lg py-10">
           <AnimatePresence mode="wait">
-            {/* --- MISSING LOGIN BLOCK RESTORED --- */}
+            {/* --- LOGIN BLOCK --- */}
             {isLogin && (
               <motion.div
                 key="login"
@@ -783,7 +801,7 @@ const Auth = () => {
               </motion.div>
             )}
 
-            {/* STEP 1: IDENTITY */}
+            {/* STEP 1: IDENTITY & LOCATION */}
             {!isLogin && step === 1 && (
               <motion.div
                 key="step1"
@@ -871,6 +889,32 @@ const Auth = () => {
                       className={inputClass}
                       required
                     />
+                  </div>
+
+                  {/* NEW LOCATION FIELDS */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>State / Province</label>
+                      <input
+                        type="text"
+                        value={userState}
+                        onChange={(e) => setUserState(e.target.value)}
+                        className={inputClass}
+                        placeholder="e.g., Rajasthan"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Country</label>
+                      <input
+                        type="text"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        className={inputClass}
+                        placeholder="e.g., India"
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
