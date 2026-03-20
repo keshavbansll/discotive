@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
@@ -17,7 +17,6 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Lock,
   Sparkles,
 } from "lucide-react";
 import { cn } from "../components/ui/BentoCard";
@@ -58,83 +57,36 @@ const StaticStars = () => {
 // ============================================================================
 // CHARACTER ASSET MATRIX
 // ============================================================================
-// Change these filenames as you download the rest of your gifs.
 const CHARACTERS = {
   rank1: {
-    Male: "/Characters/Boy-1.gif",
-    Female: "/Characters/Girl-1.gif",
-    Other: "/Characters/Others-1.gif",
+    Male: "/characters/Boy - 1.gif",
+    Female: "/characters/Boy - 1.gif",
+    Other: "/characters/Boy - 1.gif",
   },
   rank2: {
-    Male: "/Characters/Boy-2.gif",
-    Female: "/Characters/Girl-2.gif",
-    Other: "/Characters/Others-1.gif",
+    Male: "/characters/Boy - 1.gif",
+    Female: "/characters/Boy - 1.gif",
+    Other: "/characters/Boy - 1.gif",
   },
   rank3: {
-    Male: "/Characters/Boy-3.gif",
-    Female: "/Characters/Girl-3.gif",
-    Other: "/Characters/Others-1.gif",
+    Male: "/characters/Boy - 1.gif",
+    Female: "/characters/Boy - 1.gif",
+    Other: "/characters/Boy - 1.gif",
   },
   observer: {
-    Male: "/Characters/Observer.gif",
-    Female: "/Characters/Observer.gif",
-    Other: "/Characters/Observer.gif",
+    Male: "/characters/Boy - 1.gif",
+    Female: "/characters/Boy - 1.gif",
+    Other: "/characters/Boy - 1.gif",
   },
 };
 const getAvatar = (rankKey, gender) =>
   CHARACTERS[rankKey][gender] || CHARACTERS[rankKey]["Other"];
 
 // ============================================================================
-// THE COMPARE MODAL (AI TERMINAL)
+// THE COMPARE MODAL (WHATSAPP-STYLE AI TERMINAL)
 // ============================================================================
-const CompareTerminal = ({
-  isOpen,
-  onClose,
-  targetUser,
-  currentUser,
-  isPro,
-  queriesUsed,
-  maxQueries,
-  onQueryUsed,
-}) => {
-  const [stage, setStage] = useState("idle"); // "idle" | "typing" | "streaming" | "done"
-  const [displayedText, setDisplayedText] = useState("");
-  const navigate = useNavigate();
-
-  const mockResponse = `ANALYSIS COMPLETE. \n\nOperator @${currentUser?._username} vs Operator @${targetUser?._username}\n\n1. TRAJECTORY: You are trailing by ${targetUser?._score - currentUser?._score} points. @${targetUser?._username} has a higher completion rate in the 'Backend' sub-branch.\n2. VANTAGE POINT: You have a stronger consistency streak (14 days vs 6 days).\n3. TACTICAL ADVICE: Focus on closing 3 outstanding core milestones this week to overtake their position.`;
-
-  useEffect(() => {
-    if (isOpen && targetUser) {
-      if (queriesUsed >= maxQueries) {
-        setStage("done");
-        return;
-      }
-
-      setStage("typing");
-      setDisplayedText("");
-
-      const thinkTimer = setTimeout(() => {
-        setStage("streaming");
-        let i = 0;
-        const streamInterval = setInterval(() => {
-          setDisplayedText(mockResponse.substring(0, i));
-          i++;
-          if (i > mockResponse.length) {
-            clearInterval(streamInterval);
-            setStage("done");
-            onQueryUsed(); // Deduct query
-          }
-        }, 15);
-        return () => clearInterval(streamInterval);
-      }, 2000);
-
-      return () => clearTimeout(thinkTimer);
-    }
-  }, [isOpen, targetUser, currentUser]);
-
+const CompareTerminal = ({ isOpen, onClose, targetUser, currentUser }) => {
   if (!isOpen) return null;
-
-  const queriesRemaining = Math.max(0, maxQueries - queriesUsed);
 
   return (
     <div className="fixed inset-0 z-[500] flex justify-center items-end sm:items-center p-0 sm:p-6 pl-0 md:pl-64">
@@ -151,79 +103,77 @@ const CompareTerminal = ({
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="relative w-full max-w-4xl h-[85vh] sm:h-[80vh] bg-[#050505] border border-[#222] sm:rounded-[2rem] rounded-t-[2rem] flex flex-col shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden"
+        className="relative w-full max-w-2xl h-[85vh] sm:h-[75vh] bg-[#0a0a0a] border border-[#222] sm:rounded-[2rem] rounded-t-[2rem] flex flex-col shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden"
       >
-        <div className="flex justify-between items-center p-6 border-b border-[#222] bg-[#0a0a0a] shrink-0">
+        {/* Header */}
+        <div className="flex justify-between items-center p-5 border-b border-[#222] bg-[#111] shrink-0">
           <div className="flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-amber-500" />
-            <h2 className="text-sm font-extrabold tracking-widest uppercase text-white">
-              Discotive AI Engine
-            </h2>
-            <span
-              className={cn(
-                "px-2 py-0.5 text-[9px] font-bold rounded uppercase ml-2",
-                queriesRemaining === 0
-                  ? "bg-red-500/20 text-red-500"
-                  : "bg-white text-black",
-              )}
-            >
-              {queriesRemaining} / {maxQueries} Daily Queries
-            </span>
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+            </div>
+            <div>
+              <h2 className="text-sm font-extrabold tracking-tight text-white">
+                Discotive AI
+              </h2>
+              <p className="text-[10px] text-amber-500 font-medium">Online</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 bg-[#111] rounded-full text-[#666] hover:text-white transition-colors"
+            className="p-2 bg-[#222] rounded-full text-[#888] hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 md:p-10 flex-1 overflow-y-auto custom-scrollbar font-mono text-sm leading-relaxed text-[#ccc]">
-          {queriesUsed >= maxQueries &&
-          stage === "done" &&
-          displayedText === "" ? (
-            <div className="text-red-500 font-bold mb-4">
-              Error: Daily comparison limit exceeded.
+        {/* Chat Area */}
+        <div className="flex-1 overflow-y-auto p-6 bg-[#050505] flex flex-col gap-6">
+          {/* User Message Bubble */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, x: 20 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            className="self-end max-w-[80%] bg-[#222] border border-[#333] text-white px-5 py-3 rounded-2xl rounded-tr-sm shadow-md"
+          >
+            <p className="text-sm font-medium leading-relaxed">
+              Compare my profile with{" "}
+              <span className="font-bold text-amber-500">
+                @{targetUser?._username}
+              </span>
+            </p>
+            <div className="text-[9px] text-[#888] text-right mt-1 font-mono">
+              Just now
             </div>
-          ) : (
-            <>
-              <div className="mb-8 flex items-center gap-3 text-white">
-                <span className="text-amber-500">{">"}</span>
-                <span>Compare my profile with @{targetUser?._username}</span>
-              </div>
+          </motion.div>
 
-              {stage === "typing" && (
-                <div className="flex items-center gap-2 text-[#666]">
-                  <Activity className="w-4 h-4 animate-pulse" />
-                  <span>Analyzing Discotive Chains...</span>
-                </div>
-              )}
-
-              {(stage === "streaming" || stage === "done") && (
-                <div className="whitespace-pre-wrap">
-                  {displayedText}
-                  {stage === "streaming" && (
-                    <span className="inline-block w-2 h-4 bg-white ml-1 animate-pulse" />
-                  )}
-                </div>
-              )}
-            </>
-          )}
+          {/* AI Typing Indicator Bubble */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, x: -20 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            className="self-start max-w-[80%] bg-[#111] border border-[#222] px-5 py-4 rounded-2xl rounded-tl-sm shadow-md flex items-center gap-1.5"
+          >
+            <div
+              className="w-2 h-2 bg-[#555] rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            />
+            <div
+              className="w-2 h-2 bg-[#555] rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            />
+            <div
+              className="w-2 h-2 bg-[#555] rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            />
+          </motion.div>
         </div>
 
-        {!isPro && queriesRemaining === 0 && (
-          <div className="p-6 bg-[#111] border-t border-[#222] text-center shrink-0">
-            <p className="text-xs text-[#888] mb-3">
-              Daily comparison limit reached. Unlock 10 queries/day with Pro.
-            </p>
-            <button
-              onClick={() => navigate("/premium")}
-              className="px-8 py-3 bg-white text-black font-bold text-xs uppercase tracking-widest rounded-full hover:bg-[#ccc]"
-            >
-              Upgrade to Pro
-            </button>
+        {/* Fake Input Area */}
+        <div className="p-4 bg-[#111] border-t border-[#222] shrink-0">
+          <div className="w-full bg-[#050505] border border-[#333] rounded-full px-5 py-3 text-sm text-[#444] font-medium flex justify-between items-center">
+            <span>Awaiting engine response...</span>
+            <Activity className="w-4 h-4 text-[#444] animate-pulse" />
           </div>
-        )}
+        </div>
       </motion.div>
     </div>
   );
@@ -238,61 +188,41 @@ const Leaderboard = () => {
 
   const [dbUsers, setDbUsers] = useState([]);
   const [isFetching, setIsFetching] = useState(true);
-  const [subscriptionTier, setSubscriptionTier] = useState("free");
 
+  // Click-Outside Ref for Dropdowns
+  const filterBarRef = useRef(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [limit, setLimit] = useState(15);
+
+  // Pagination & Filters State
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({
+    domain: "All",
+    niche: "All",
+    location: "All",
+    timeframe: "All-Time",
+    limit: 15,
+  });
 
   // Compare Tracking State
   const [compareTarget, setCompareTarget] = useState(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
-  const [queriesUsed, setQueriesUsed] = useState(0);
 
-  const [filters, setFilters] = useState({
-    scope: "Global Standings",
-    domain: "All Domains",
-    chronos: "All-Time Ledger",
-  });
-
-  // Load Compare Usage from Local Cache
   useEffect(() => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const usage = JSON.parse(
-      localStorage.getItem("discotive_compare_usage") || "{}",
-    );
-    if (usage.date === todayStr) {
-      setQueriesUsed(usage.count);
-    } else {
-      setQueriesUsed(0);
-      localStorage.setItem(
-        "discotive_compare_usage",
-        JSON.stringify({ date: todayStr, count: 0 }),
-      );
-    }
+    const handleClickOutside = (event) => {
+      if (
+        filterBarRef.current &&
+        !filterBarRef.current.contains(event.target)
+      ) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleQueryUsed = () => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const newCount = queriesUsed + 1;
-    setQueriesUsed(newCount);
-    localStorage.setItem(
-      "discotive_compare_usage",
-      JSON.stringify({ date: todayStr, count: newCount }),
-    );
-  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const uid = auth.currentUser?.uid || userData?.id;
-        if (uid) {
-          const subRef = doc(db, "users", uid, "subscription", "current");
-          const subSnap = await getDoc(subRef);
-          if (subSnap.exists())
-            setSubscriptionTier(subSnap.data().tier || "free");
-        }
-
         const querySnapshot = await getDocs(collection(db, "users"));
         const rawUsers = [];
         querySnapshot.forEach((doc) => {
@@ -304,7 +234,6 @@ const Leaderboard = () => {
           .map((u, index) => {
             const fName = u.identity?.firstName || "Unknown";
             const lName = u.identity?.lastName || "";
-            // Mock Velocity Data for UI demonstration
             const mockVelocity = Math.floor(Math.random() * 15) - 5;
 
             return {
@@ -314,10 +243,10 @@ const Leaderboard = () => {
               _lastName: lName,
               _email: u.identity?.email || "",
               _username: u.identity?.username || "user",
-              _gender: u.identity?.gender || "Other", // Sourced from Auth Onboarding
+              _gender: u.identity?.gender || "Other",
               _domain: u.vision?.passion || "Uncategorized",
               _niche: u.vision?.niche || "Unspecified",
-              _location: u.footprint?.location || null,
+              _location: u.footprint?.location || "Unknown",
               _score: u.discotiveScore || 0,
               _velocity: mockVelocity,
             };
@@ -331,20 +260,39 @@ const Leaderboard = () => {
       }
     };
     fetchData();
-  }, [userData?.id]);
+  }, []);
 
+  // --- DYNAMIC DATABASE OPTIONS ---
+  const uniqueDomains = useMemo(
+    () => ["All", ...new Set(dbUsers.map((u) => u._domain))],
+    [dbUsers],
+  );
+  const uniqueNiches = useMemo(
+    () => ["All", ...new Set(dbUsers.map((u) => u._niche))],
+    [dbUsers],
+  );
+  const uniqueLocations = useMemo(
+    () => ["All", ...new Set(dbUsers.map((u) => u._location))],
+    [dbUsers],
+  );
+
+  // --- FILTERING LOGIC ---
   const filteredLedger = useMemo(() => {
     return dbUsers.filter((u) => {
-      if (filters.domain !== "All Domains" && u._domain !== filters.domain)
+      if (filters.domain !== "All" && u._domain !== filters.domain)
+        return false;
+      if (filters.niche !== "All" && u._niche !== filters.niche) return false;
+      if (filters.location !== "All" && u._location !== filters.location)
         return false;
       return true;
     });
   }, [dbUsers, filters]);
 
   const paginatedLedger = filteredLedger.slice(
-    (page - 1) * limit,
-    page * limit,
+    (page - 1) * filters.limit,
+    page * filters.limit,
   );
+
   const currentUserObj = dbUsers.find(
     (u) => u._email === userData?.identity?.email,
   );
@@ -355,7 +303,6 @@ const Leaderboard = () => {
   // Linear Podium Logic
   const top3 = [filteredLedger[0], filteredLedger[1], filteredLedger[2]];
   const isMeInTop3 = currentUserGlobalRank > 0 && currentUserGlobalRank <= 3;
-  const maxQueries = subscriptionTier === "free" ? 1 : 10;
 
   if (isFetching || userLoading) {
     return (
@@ -398,9 +345,9 @@ const Leaderboard = () => {
           </motion.p>
         </div>
 
-        {/* --- THE OSCAR PODIUM (LINEAR + HIGH DIFFERENTIAL) --- */}
+        {/* --- THE OSCAR PODIUM --- */}
         <div className="flex justify-center items-end gap-2 md:gap-4 h-[450px] md:h-[500px] pt-10 overflow-x-auto custom-scrollbar px-4">
-          {/* Rank 1 (Tallest) */}
+          {/* Rank 1 */}
           {top3[0] && (
             <div className="flex flex-col items-center justify-end w-[110px] md:w-56 h-full shrink-0">
               <div className="w-32 h-32 md:w-44 md:h-44 mb-[-20px] z-10 flex items-end justify-center drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
@@ -423,7 +370,7 @@ const Leaderboard = () => {
               </div>
             </div>
           )}
-          {/* Rank 2 (Medium) */}
+          {/* Rank 2 */}
           {top3[1] && (
             <div className="flex flex-col items-center justify-end w-[110px] md:w-48 h-full shrink-0">
               <div className="w-24 h-24 md:w-32 md:h-32 mb-[-15px] z-10 flex items-end justify-center drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]">
@@ -446,7 +393,7 @@ const Leaderboard = () => {
               </div>
             </div>
           )}
-          {/* Rank 3 (Shortest Golden) */}
+          {/* Rank 3 */}
           {top3[2] && (
             <div className="flex flex-col items-center justify-end w-[110px] md:w-44 h-full shrink-0">
               <div className="w-20 h-20 md:w-28 md:h-28 mb-[-10px] z-10 flex items-end justify-center drop-shadow-[0_0_10px_rgba(245,158,11,0.2)]">
@@ -469,7 +416,7 @@ const Leaderboard = () => {
               </div>
             </div>
           )}
-          {/* Rank 4: THE OBSERVER (Current User if not in Top 3) */}
+          {/* Rank 4: THE OBSERVER */}
           {!isMeInTop3 && currentUserObj && (
             <div className="flex flex-col items-center justify-end w-[110px] md:w-40 h-full shrink-0 opacity-80 pl-4 md:pl-8 border-l border-[#222]">
               <div className="w-16 h-16 md:w-24 md:h-24 mb-[-5px] z-10 flex items-end justify-center drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
@@ -491,22 +438,25 @@ const Leaderboard = () => {
           )}
         </div>
 
-        {/* --- CASCADING QUERY ENGINE & PRO LOCKS --- */}
-        <motion.div className="bg-[#0a0a0a] border border-[#222] p-6 md:p-8 rounded-[2rem] shadow-2xl relative z-30">
+        {/* --- DYNAMIC QUERY ENGINE --- */}
+        <motion.div
+          ref={filterBarRef}
+          className="bg-[#0a0a0a] border border-[#222] p-6 md:p-8 rounded-[2rem] shadow-2xl relative z-30"
+        >
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 border-b border-[#222] pb-6">
             <div className="flex items-center gap-4">
               <h3 className="text-xs font-bold text-white uppercase tracking-[0.3em] flex items-center gap-2">
                 <Filter className="w-4 h-4" /> Ledger Engine
               </h3>
               <div className="px-3 py-1 bg-[#111] rounded border border-[#333] text-[10px] font-mono text-[#888]">
-                {filteredLedger.length} Operators
+                {filteredLedger.length} Operators found
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-4 flex-wrap">
-            {/* DOMAIN (Free) */}
-            <div className="relative w-full sm:w-56">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* DOMAIN FILTER */}
+            <div className="relative flex-1 min-w-[200px]">
               <p className="text-[10px] font-bold text-[#555] uppercase tracking-[0.2em] mb-2 px-1">
                 Macro Domain
               </p>
@@ -518,7 +468,9 @@ const Leaderboard = () => {
                 }
                 className="w-full flex items-center justify-between px-4 py-3 bg-[#050505] border border-[#222] rounded-xl text-sm font-bold text-white hover:border-[#444] transition-colors"
               >
-                <span className="truncate">{filters.domain}</span>{" "}
+                <span className="truncate">
+                  {filters.domain === "All" ? "Global" : filters.domain}
+                </span>{" "}
                 <ChevronDown className="w-4 h-4 text-[#666]" />
               </button>
               <AnimatePresence>
@@ -527,15 +479,9 @@ const Leaderboard = () => {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#0a0a0a] border border-[#333] rounded-xl z-40 shadow-2xl overflow-hidden"
+                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#0a0a0a] border border-[#333] rounded-xl z-40 shadow-2xl max-h-60 overflow-y-auto custom-scrollbar"
                   >
-                    {[
-                      "All Domains",
-                      "Engineer",
-                      "Designer",
-                      "Filmmaker",
-                      "Founder / CEO",
-                    ].map((d) => (
+                    {uniqueDomains.map((d) => (
                       <button
                         key={d}
                         onClick={() => {
@@ -543,9 +489,9 @@ const Leaderboard = () => {
                           setActiveDropdown(null);
                           setPage(1);
                         }}
-                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#888] hover:text-white hover:bg-[#111] truncate"
+                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#888] hover:text-white hover:bg-[#111] truncate border-b border-[#111]"
                       >
-                        {d}
+                        {d === "All" ? "Global (All Domains)" : d}
                       </button>
                     ))}
                   </motion.div>
@@ -553,44 +499,174 @@ const Leaderboard = () => {
               </AnimatePresence>
             </div>
 
-            {/* CHRONOS (Pro Lock) */}
-            <div className="relative w-full sm:w-56">
-              <p className="text-[10px] font-bold text-[#555] uppercase tracking-[0.2em] mb-2 px-1 flex items-center gap-2">
-                Chronos <Lock className="w-3 h-3 text-[#444]" />
+            {/* NICHE FILTER */}
+            <div className="relative flex-1 min-w-[200px]">
+              <p className="text-[10px] font-bold text-[#555] uppercase tracking-[0.2em] mb-2 px-1">
+                Micro Niche
               </p>
               <button
                 onClick={() =>
-                  subscriptionTier === "free"
-                    ? navigate("/premium")
-                    : setActiveDropdown("chronos")
+                  setActiveDropdown(activeDropdown === "niche" ? null : "niche")
                 }
-                className={cn(
-                  "w-full flex items-center justify-between px-4 py-3 border rounded-xl text-sm font-bold transition-colors",
-                  subscriptionTier === "free"
-                    ? "bg-[#111] border-[#222] text-[#666] cursor-pointer"
-                    : "bg-[#050505] border-[#222] text-white hover:border-[#444]",
-                )}
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#050505] border border-[#222] rounded-xl text-sm font-bold text-white hover:border-[#444] transition-colors"
               >
-                {filters.chronos}{" "}
-                {subscriptionTier === "free" ? (
-                  <Lock className="w-4 h-4 text-[#444]" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-[#666]" />
-                )}
+                <span className="truncate">
+                  {filters.niche === "All" ? "Any Niche" : filters.niche}
+                </span>{" "}
+                <ChevronDown className="w-4 h-4 text-[#666]" />
               </button>
+              <AnimatePresence>
+                {activeDropdown === "niche" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#0a0a0a] border border-[#333] rounded-xl z-40 shadow-2xl max-h-60 overflow-y-auto custom-scrollbar"
+                  >
+                    {uniqueNiches.map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => {
+                          setFilters({ ...filters, niche: n });
+                          setActiveDropdown(null);
+                          setPage(1);
+                        }}
+                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#888] hover:text-white hover:bg-[#111] truncate border-b border-[#111]"
+                      >
+                        {n === "All" ? "Any Niche" : n}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* MICRO NICHE (Pro Lock) */}
-            <div className="relative w-full sm:w-56">
-              <p className="text-[10px] font-bold text-[#555] uppercase tracking-[0.2em] mb-2 px-1 flex items-center gap-2">
-                Micro Niche <Lock className="w-3 h-3 text-[#444]" />
+            {/* LOCATION FILTER */}
+            <div className="relative flex-1 min-w-[200px]">
+              <p className="text-[10px] font-bold text-[#555] uppercase tracking-[0.2em] mb-2 px-1">
+                State / Country
               </p>
               <button
-                onClick={() => navigate("/premium")}
-                className="w-full flex items-center justify-between px-4 py-3 bg-[#111] border border-[#222] rounded-xl text-sm font-bold text-[#666]"
+                onClick={() =>
+                  setActiveDropdown(
+                    activeDropdown === "location" ? null : "location",
+                  )
+                }
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#050505] border border-[#222] rounded-xl text-sm font-bold text-white hover:border-[#444] transition-colors"
               >
-                All Niches <Lock className="w-4 h-4 text-[#444]" />
+                <span className="truncate">
+                  {filters.location === "All" ? "Worldwide" : filters.location}
+                </span>{" "}
+                <ChevronDown className="w-4 h-4 text-[#666]" />
               </button>
+              <AnimatePresence>
+                {activeDropdown === "location" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#0a0a0a] border border-[#333] rounded-xl z-40 shadow-2xl max-h-60 overflow-y-auto custom-scrollbar"
+                  >
+                    {uniqueLocations.map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => {
+                          setFilters({ ...filters, location: l });
+                          setActiveDropdown(null);
+                          setPage(1);
+                        }}
+                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#888] hover:text-white hover:bg-[#111] truncate border-b border-[#111]"
+                      >
+                        {l === "All" ? "Worldwide" : l}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* TIMEFRAME FILTER */}
+            <div className="relative w-32">
+              <p className="text-[10px] font-bold text-[#555] uppercase tracking-[0.2em] mb-2 px-1">
+                Timeframe
+              </p>
+              <button
+                onClick={() =>
+                  setActiveDropdown(
+                    activeDropdown === "timeframe" ? null : "timeframe",
+                  )
+                }
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#050505] border border-[#222] rounded-xl text-sm font-bold text-white hover:border-[#444] transition-colors"
+              >
+                <span className="truncate">{filters.timeframe}</span>{" "}
+                <ChevronDown className="w-4 h-4 text-[#666]" />
+              </button>
+              <AnimatePresence>
+                {activeDropdown === "timeframe" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#0a0a0a] border border-[#333] rounded-xl z-40 shadow-2xl max-h-60 overflow-y-auto custom-scrollbar"
+                  >
+                    {["All-Time", "This Year", "This Month", "Today"].map(
+                      (t) => (
+                        <button
+                          key={t}
+                          onClick={() => {
+                            setFilters({ ...filters, timeframe: t });
+                            setActiveDropdown(null);
+                            setPage(1);
+                          }}
+                          className="w-full text-left px-4 py-3 text-xs font-bold text-[#888] hover:text-white hover:bg-[#111] truncate border-b border-[#111]"
+                        >
+                          {t}
+                        </button>
+                      ),
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ROWS PER PAGE FILTER */}
+            <div className="relative w-24">
+              <p className="text-[10px] font-bold text-[#555] uppercase tracking-[0.2em] mb-2 px-1">
+                Display
+              </p>
+              <button
+                onClick={() =>
+                  setActiveDropdown(activeDropdown === "limit" ? null : "limit")
+                }
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#050505] border border-[#222] rounded-xl text-sm font-bold text-white hover:border-[#444] transition-colors"
+              >
+                <span className="truncate">{filters.limit}</span>{" "}
+                <ChevronDown className="w-4 h-4 text-[#666]" />
+              </button>
+              <AnimatePresence>
+                {activeDropdown === "limit" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#0a0a0a] border border-[#333] rounded-xl z-40 shadow-2xl max-h-60 overflow-y-auto custom-scrollbar"
+                  >
+                    {[5, 10, 15, 20].map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => {
+                          setFilters({ ...filters, limit: l });
+                          setActiveDropdown(null);
+                          setPage(1);
+                        }}
+                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#888] hover:text-white hover:bg-[#111] border-b border-[#111]"
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </motion.div>
@@ -613,7 +689,7 @@ const Leaderboard = () => {
                 </div>
               ) : (
                 paginatedLedger.map((user, idx) => {
-                  const rank = (page - 1) * limit + idx + 1;
+                  const rank = (page - 1) * filters.limit + idx + 1;
                   const isGhostTarget =
                     user._globalRank === currentUserGlobalRank - 1;
                   const isMe = user._email === userData?.identity?.email;
@@ -709,7 +785,7 @@ const Leaderboard = () => {
 
                       {/* Location */}
                       <div className="col-span-2 flex items-center gap-2 text-sm font-medium">
-                        {user._location ? (
+                        {user._location && user._location !== "Unknown" ? (
                           <>
                             <MapPin className="w-3 h-3 text-[#555]" />
                             <span className="text-[#888] truncate group-hover:text-white transition-colors text-xs">
@@ -723,7 +799,7 @@ const Leaderboard = () => {
                         )}
                       </div>
 
-                      {/* Actions (Score + Deep Recon / Compare) */}
+                      {/* Actions */}
                       <div className="col-span-2 flex items-center justify-end gap-4">
                         {!isMe && (
                           <button
@@ -777,7 +853,7 @@ const Leaderboard = () => {
         </div>
       </div>
 
-      {/* COMPARE TERMINAL MODAL */}
+      {/* WHATSAPP STYLE AI TERMINAL */}
       <AnimatePresence>
         {isCompareOpen && (
           <CompareTerminal
@@ -785,10 +861,6 @@ const Leaderboard = () => {
             onClose={() => setIsCompareOpen(false)}
             targetUser={compareTarget}
             currentUser={currentUserObj}
-            isPro={subscriptionTier === "pro"}
-            queriesUsed={queriesUsed}
-            maxQueries={maxQueries}
-            onQueryUsed={handleQueryUsed}
           />
         )}
       </AnimatePresence>

@@ -435,6 +435,24 @@ const FlowCanvas = ({
       </ReactFlow>
 
       <AnimatePresence>
+        {/* Invisible Backdrop to close menus when clicking anywhere else */}
+        {(paneMenu || nodeMenu || edgeMenu) && (
+          <div
+            className="fixed inset-0 z-[90]"
+            onClick={() => {
+              setPaneMenu(null);
+              setNodeMenu(null);
+              setEdgeMenu(null);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setPaneMenu(null);
+              setNodeMenu(null);
+              setEdgeMenu(null);
+            }}
+          />
+        )}
+
         {paneMenu && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -509,6 +527,7 @@ const Roadmap = () => {
   const [viewMode, setViewMode] = useState("timeline");
   const [timeframe, setTimeframe] = useState("Macro Vision");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -557,6 +576,16 @@ const Roadmap = () => {
         ),
       );
     }
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // --- FIREBASE FETCH (ROADMAP + SUBSCRIPTION) ---
@@ -1318,7 +1347,7 @@ const Roadmap = () => {
           </p>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto relative">
-          <div className="relative w-full md:w-64">
+          <div className="relative w-full md:w-64" ref={dropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="w-full flex items-center justify-between gap-4 bg-[#0a0a0a] border border-[#222] px-6 py-4 rounded-full font-bold text-sm text-white hover:border-[#444] transition-colors"
