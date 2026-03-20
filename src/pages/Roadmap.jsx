@@ -9,7 +9,6 @@ import {
   addDoc,
   collection,
 } from "firebase/firestore";
-import { db } from "../firebase";
 import ReactFlow, {
   Background,
   Controls,
@@ -55,6 +54,7 @@ import {
 } from "lucide-react";
 import { useUserData } from "../hooks/useUserData";
 import { cn } from "../components/ui/BentoCard";
+import { db, auth } from "../firebase";
 
 // ============================================================================
 // UTILITIES
@@ -516,16 +516,11 @@ const Roadmap = () => {
   // --- FIREBASE FETCH (ROADMAP + SUBSCRIPTION) ---
   useEffect(() => {
     const fetchData = async () => {
-      if (!userData?.id) return;
+      const uid = auth.currentUser?.uid || userData?.id; // <-- ADD THIS
+      if (!uid) return;
       try {
         // 1. Fetch Roadmap
-        const docRef = doc(
-          db,
-          "users",
-          userData.id,
-          "execution_map",
-          "current",
-        );
+        const docRef = doc(db, "users", uid, "execution_map", "current");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const rm = docSnap.data();
@@ -550,12 +545,11 @@ const Roadmap = () => {
         }
 
         // 2. Fetch Subscription
-        const subRef = doc(db, "users", userData.id, "subscription", "current");
+        const subRef = doc(db, "users", uid, "subscription", "current");
         const subSnap = await getDoc(subRef);
         if (subSnap.exists()) {
           setSubscriptionTier(subSnap.data().tier || "free");
         } else {
-          // Auto-initialize free tier for new users
           await setDoc(subRef, {
             tier: "free",
             status: "active",
@@ -572,11 +566,13 @@ const Roadmap = () => {
 
   // --- FIREBASE SAVE (ROADMAP) ---
   const handleCloudSave = useCallback(async () => {
-    if (!hasUnsavedChanges || !userData?.id) return;
+    const uid = auth.currentUser?.uid || userData?.id; // <-- ADD THIS
+    if (!hasUnsavedChanges || !uid) return;
+
     setIsSaving(true);
     try {
       await setDoc(
-        doc(db, "users", userData.id, "execution_map", "current"),
+        doc(db, "users", uid, "execution_map", "current"),
         {
           nodes,
           edges,
@@ -594,13 +590,6 @@ const Roadmap = () => {
       setIsSaving(false);
     }
   }, [hasUnsavedChanges, userData?.id, nodes, edges, dailyStats, addToast]);
-
-  useEffect(() => {
-    if (hasUnsavedChanges) {
-      const timer = setTimeout(() => handleCloudSave(), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [hasUnsavedChanges, handleCloudSave]);
 
   // --- TASK AUTO-MIGRATION ALGORITHM (Overdue handling) ---
   useEffect(() => {
@@ -1143,7 +1132,7 @@ const Roadmap = () => {
   });
 
   const handleSaveJournal = async () => {
-    const uid = userData?.id;
+    const uid = auth.currentUser?.uid || userData?.id; // <-- ADD THIS
     if (!journalText.trim() || !uid) return;
     try {
       await addDoc(collection(db, "users", uid, "journal_entries"), {
