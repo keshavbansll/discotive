@@ -574,69 +574,64 @@ const FlowCanvas = ({
         </button>
       </div>
 
-      {/* MOBILE FULLSCREEN EDIT CONTROLS */}
-      {isMapFullscreen && (
-        <div className="md:hidden absolute top-4 left-4 z-[80] flex flex-col gap-3">
-          <button
-            onClick={() => {
-              setIsMobileEditMode(!isMobileEditMode);
-              setSelectedMobileElement(null);
-            }}
-            className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center shadow-2xl border transition-colors",
-              isMobileEditMode
-                ? "bg-white text-black border-white"
-                : "bg-[#0a0a0a]/90 backdrop-blur-xl text-[#888] border-[#222]",
-            )}
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
+      {/* MOBILE EDIT CONTROLS (Always visible on mobile) */}
+      <div className="md:hidden absolute bottom-6 right-6 z-[80] flex flex-col-reverse gap-3 items-end">
+        <button
+          onClick={() => {
+            setIsMobileEditMode(!isMobileEditMode);
+            setSelectedMobileElement(null);
+          }}
+          className={cn(
+            "w-12 h-12 rounded-full flex items-center justify-center shadow-2xl border transition-colors",
+            isMobileEditMode
+              ? "bg-white text-black border-white"
+              : "bg-[#0a0a0a]/90 backdrop-blur-xl text-[#888] border-[#222]",
+          )}
+        >
+          <Edit2 className="w-5 h-5" />
+        </button>
 
-          <AnimatePresence>
-            {isMobileEditMode && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="flex flex-col gap-2"
+        <AnimatePresence>
+          {isMobileEditMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              className="flex flex-col gap-3 mb-2"
+            >
+              <button
+                onClick={() => {
+                  fitView();
+                  setTimeout(() => addNode("core", { x: 250, y: 250 }), 500);
+                }}
+                className="w-10 h-10 bg-[#0a0a0a]/90 backdrop-blur-xl border border-[#222] rounded-full flex items-center justify-center text-white shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
               >
-                <button
-                  onClick={() => {
-                    fitView();
-                    setTimeout(() => addNode("core", { x: 250, y: 250 }), 500);
-                  }}
-                  className="w-10 h-10 bg-[#0a0a0a]/90 backdrop-blur-xl border border-[#222] rounded-full flex items-center justify-center text-white shadow-2xl"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    fitView();
-                    setTimeout(
-                      () => addNode("branch", { x: 250, y: 250 }),
-                      500,
-                    );
-                  }}
-                  className="w-10 h-10 bg-[#0a0a0a]/90 backdrop-blur-xl border border-[#222] rounded-full flex items-center justify-center text-white shadow-2xl"
-                >
-                  <GitBranch className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() =>
-                    selectedMobileElement?.type === "node"
-                      ? deleteNode(selectedMobileElement.id)
-                      : deleteEdge(selectedMobileElement.id)
-                  }
-                  disabled={!selectedMobileElement}
-                  className="w-10 h-10 bg-[#450a0a]/90 backdrop-blur-xl border border-red-500/30 rounded-full flex items-center justify-center text-red-500 disabled:opacity-30 shadow-2xl transition-opacity"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  fitView();
+                  setTimeout(() => addNode("branch", { x: 250, y: 250 }), 500);
+                }}
+                className="w-10 h-10 bg-[#0a0a0a]/90 backdrop-blur-xl border border-[#222] rounded-full flex items-center justify-center text-white shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
+              >
+                <GitBranch className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() =>
+                  selectedMobileElement?.type === "node"
+                    ? deleteNode(selectedMobileElement.id)
+                    : deleteEdge(selectedMobileElement.id)
+                }
+                disabled={!selectedMobileElement}
+                className="w-10 h-10 bg-[#450a0a]/90 backdrop-blur-xl border border-red-500/30 rounded-full flex items-center justify-center text-red-500 disabled:opacity-30 shadow-[0_10px_20px_rgba(0,0,0,0.8)] transition-opacity"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* MOBILE FULLSCREEN EXIT CONTROLS */}
       {isMapFullscreen && (
@@ -1458,16 +1453,88 @@ const Roadmap = () => {
 
       const rawStat = dailyStats[ds] || {};
 
-      return {
-        date: d,
-        ds,
-        stat: {
-          total: rawStat.total || rawStat.count || 0,
-          subTasks: rawStat.subTasks || 0,
-          branches: rawStat.branches || (rawStat.hasBranch ? 1 : 0),
-          cores: rawStat.cores || (rawStat.hasCore ? 1 : 0),
-        },
-      };
+      return (
+        <div
+          ref={chartRef}
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+          // Added group/chart to control peer-fading on hover
+          className="flex items-end gap-1.5 h-full w-full mt-auto overflow-x-auto custom-scrollbar cursor-grab active:cursor-grabbing pb-2 pt-24 group/chart"
+        >
+          {days.map(({ date, ds, stat }, i) => {
+            const isToday = isSameDay(date, new Date());
+
+            let bgClass = "bg-[#222]";
+            if (stat.total > 0) {
+              if (stat.cores > 0 && stat.branches > 0) {
+                bgClass =
+                  "bg-gradient-to-b from-[#052e16] via-[#15803d] to-[#4ade80]";
+              } else if (stat.cores > 0) {
+                bgClass = "bg-gradient-to-b from-[#14532d] to-[#4ade80]";
+              } else if (stat.branches > 0) {
+                bgClass = "bg-gradient-to-b from-[#16a34a] to-[#86efac]";
+              } else {
+                bgClass = "bg-[#4ade80]";
+              }
+            }
+
+            return (
+              <div
+                key={i}
+                // Peer-fading logic: fade out others when chart is hovered, keep hovered solid
+                className="relative group flex-1 min-w-[14px] flex flex-col justify-end items-center h-full hover:z-50 transition-opacity duration-300 group-hover/chart:opacity-50 hover:!opacity-100"
+                title={`${date.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}\nTasks: ${stat.subTasks}\nBranches: ${stat.branches}\nCores: ${stat.cores}`}
+              >
+                <div
+                  className={cn("w-full rounded-sm transition-all", bgClass)}
+                  style={{
+                    height: `${Math.max(5, Math.min(75, stat.total * 15))}%`,
+                  }}
+                />
+                {isToday && (
+                  <div className="w-full h-1 bg-white mt-1 rounded-full shrink-0" />
+                )}
+
+                {/* UPGRADED GLASSMORPHIC TOOLTIP */}
+                <div className="absolute bottom-[calc(100%+12px)] opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 bg-[#0a0a0a]/95 backdrop-blur-xl border border-[#222] shadow-[0_20px_50px_rgba(0,0,0,0.8)] text-white text-xs px-4 py-3 rounded-xl pointer-events-none whitespace-nowrap z-[100] flex flex-col gap-1.5 transition-all duration-300">
+                  {/* Tooltip Triangle Pointer */}
+                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0a0a0a] border-b border-r border-[#222] rotate-45" />
+
+                  <span className="font-extrabold border-b border-[#333] pb-1.5 mb-1 text-center tracking-wide">
+                    {date.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                  <span className="text-[#888] flex justify-between gap-6">
+                    <span>Sub-Tasks</span>{" "}
+                    <span className="text-[#4ade80] font-extrabold">
+                      {stat.subTasks}
+                    </span>
+                  </span>
+                  <span className="text-[#888] flex justify-between gap-6">
+                    <span>Branches</span>{" "}
+                    <span className="text-[#16a34a] font-extrabold">
+                      {stat.branches}
+                    </span>
+                  </span>
+                  <span className="text-[#888] flex justify-between gap-6">
+                    <span>Cores</span>{" "}
+                    <span className="text-[#14532d] font-extrabold">
+                      {stat.cores}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
     });
 
     // 3. Auto-scroll to center "Today" on initial render
