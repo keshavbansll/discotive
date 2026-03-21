@@ -459,6 +459,40 @@ const FlowCanvas = ({
     }
   };
 
+  const memoizedNodeTypes = useMemo(
+    () => ({ executionNode: ExecutionNode }),
+    [],
+  );
+
+  const mappedNodes = useMemo(() => {
+    return filteredNodes.map((n) => ({
+      ...n,
+      style: {
+        ...n.style,
+        boxShadow:
+          isMobileEditMode && selectedMobileElement?.id === n.id
+            ? "0 0 0 2px white"
+            : "none",
+        borderRadius: "24px",
+      },
+    }));
+  }, [filteredNodes, isMobileEditMode, selectedMobileElement]);
+
+  const mappedEdges = useMemo(() => {
+    return edges.map((e) => ({
+      ...e,
+      style: {
+        ...e.style,
+        stroke:
+          isMobileEditMode && selectedMobileElement?.id === e.id
+            ? "white"
+            : e.style?.stroke || "#666",
+        strokeWidth:
+          isMobileEditMode && selectedMobileElement?.id === e.id ? 4 : 2,
+      },
+    }));
+  }, [edges, isMobileEditMode, selectedMobileElement]);
+
   return (
     <div
       className={cn(
@@ -646,6 +680,9 @@ const FlowCanvas = ({
       )}
 
       <ReactFlow
+        nodes={mappedNodes}
+        edges={mappedEdges}
+        nodeTypes={memoizedNodeTypes}
         nodes={filteredNodes.map((n) => ({
           ...n,
           style: {
@@ -1422,7 +1459,7 @@ const Roadmap = () => {
     let startX;
     let scrollLeft;
 
-    // 1. Define mouse handlers FIRST
+    // 1. Define handlers
     const handleMouseDown = (e) => {
       isDown = true;
       startX = e.pageX - chartRef.current.offsetLeft;
@@ -1442,102 +1479,31 @@ const Roadmap = () => {
       chartRef.current.scrollLeft = scrollLeft - walk;
     };
 
-    // 2. Generate days array
-    const days = Array.from({ length: 31 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (15 - i));
+    // 2. Safely memoize the data generation to prevent ReferenceErrors
+    const chartDays = useMemo(() => {
+      return Array.from({ length: 31 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (15 - i));
 
-      // Localize Timezone
-      const offset = d.getTimezoneOffset() * 60000;
-      const ds = new Date(d.getTime() - offset).toISOString().split("T")[0];
+        const offset = d.getTimezoneOffset() * 60000;
+        const ds = new Date(d.getTime() - offset).toISOString().split("T")[0];
 
-      const rawStat = dailyStats[ds] || {};
+        const rawStat = dailyStats[ds] || {};
 
-      return (
-        <div
-          ref={chartRef}
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleMouseLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          // Added group/chart to control peer-fading on hover
-          className="flex items-end gap-1.5 h-full w-full mt-auto overflow-x-auto custom-scrollbar cursor-grab active:cursor-grabbing pb-2 pt-24 group/chart"
-        >
-          {days.map(({ date, ds, stat }, i) => {
-            const isToday = isSameDay(date, new Date());
+        return {
+          date: d,
+          ds,
+          stat: {
+            total: rawStat.total || rawStat.count || 0,
+            subTasks: rawStat.subTasks || 0,
+            branches: rawStat.branches || (rawStat.hasBranch ? 1 : 0),
+            cores: rawStat.cores || (rawStat.hasCore ? 1 : 0),
+          },
+        };
+      });
+    }, [dailyStats]);
 
-            let bgClass = "bg-[#222]";
-            if (stat.total > 0) {
-              if (stat.cores > 0 && stat.branches > 0) {
-                bgClass =
-                  "bg-gradient-to-b from-[#052e16] via-[#15803d] to-[#4ade80]";
-              } else if (stat.cores > 0) {
-                bgClass = "bg-gradient-to-b from-[#14532d] to-[#4ade80]";
-              } else if (stat.branches > 0) {
-                bgClass = "bg-gradient-to-b from-[#16a34a] to-[#86efac]";
-              } else {
-                bgClass = "bg-[#4ade80]";
-              }
-            }
-
-            return (
-              <div
-                key={i}
-                // Peer-fading logic: fade out others when chart is hovered, keep hovered solid
-                className="relative group flex-1 min-w-[14px] flex flex-col justify-end items-center h-full hover:z-50 transition-opacity duration-300 group-hover/chart:opacity-50 hover:!opacity-100"
-                title={`${date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}\nTasks: ${stat.subTasks}\nBranches: ${stat.branches}\nCores: ${stat.cores}`}
-              >
-                <div
-                  className={cn("w-full rounded-sm transition-all", bgClass)}
-                  style={{
-                    height: `${Math.max(5, Math.min(75, stat.total * 15))}%`,
-                  }}
-                />
-                {isToday && (
-                  <div className="w-full h-1 bg-white mt-1 rounded-full shrink-0" />
-                )}
-
-                {/* UPGRADED GLASSMORPHIC TOOLTIP */}
-                <div className="absolute bottom-[calc(100%+12px)] opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 bg-[#0a0a0a]/95 backdrop-blur-xl border border-[#222] shadow-[0_20px_50px_rgba(0,0,0,0.8)] text-white text-xs px-4 py-3 rounded-xl pointer-events-none whitespace-nowrap z-[100] flex flex-col gap-1.5 transition-all duration-300">
-                  {/* Tooltip Triangle Pointer */}
-                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0a0a0a] border-b border-r border-[#222] rotate-45" />
-
-                  <span className="font-extrabold border-b border-[#333] pb-1.5 mb-1 text-center tracking-wide">
-                    {date.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <span className="text-[#888] flex justify-between gap-6">
-                    <span>Sub-Tasks</span>{" "}
-                    <span className="text-[#4ade80] font-extrabold">
-                      {stat.subTasks}
-                    </span>
-                  </span>
-                  <span className="text-[#888] flex justify-between gap-6">
-                    <span>Branches</span>{" "}
-                    <span className="text-[#16a34a] font-extrabold">
-                      {stat.branches}
-                    </span>
-                  </span>
-                  <span className="text-[#888] flex justify-between gap-6">
-                    <span>Cores</span>{" "}
-                    <span className="text-[#14532d] font-extrabold">
-                      {stat.cores}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      );
-    });
-
-    // 3. Auto-scroll to center "Today" on initial render
+    // 3. Auto-scroll center
     useEffect(() => {
       if (chartRef.current) {
         const container = chartRef.current;
@@ -1546,7 +1512,7 @@ const Roadmap = () => {
           15 * childWidth - container.clientWidth / 2 + childWidth / 2;
         container.scrollLeft = middleOffset;
       }
-    }, [dailyStats]);
+    }, [chartDays]);
 
     return (
       <div
@@ -1555,13 +1521,11 @@ const Roadmap = () => {
         onMouseLeave={handleMouseLeave}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
-        // Added pt-20 to give the tooltip headroom inside the scroll container
-        className="flex items-end gap-1.5 h-full w-full mt-auto overflow-x-auto custom-scrollbar cursor-grab active:cursor-grabbing pb-2 pt-20"
+        className="flex items-end gap-1.5 h-full w-full mt-auto overflow-x-auto custom-scrollbar cursor-grab active:cursor-grabbing pb-2 pt-24 group/chart"
       >
-        {days.map(({ date, ds, stat }, i) => {
+        {chartDays.map(({ date, ds, stat }, i) => {
           const isToday = isSameDay(date, new Date());
 
-          // --- ADVANCED GRADIENT LOGIC ---
           let bgClass = "bg-[#222]";
           if (stat.total > 0) {
             if (stat.cores > 0 && stat.branches > 0) {
@@ -1579,16 +1543,10 @@ const Roadmap = () => {
           return (
             <div
               key={i}
-              className="relative group flex-1 min-w-[14px] flex flex-col justify-end items-center h-full"
-              // Native fallback for mobile long-press
-              title={`${date.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}\nTasks: ${stat.subTasks}\nBranches: ${stat.branches}\nCores: ${stat.cores}`}
+              className="relative group flex-1 min-w-[14px] flex flex-col justify-end items-center h-full hover:z-50 transition-opacity duration-300 group-hover/chart:opacity-50 hover:!opacity-100"
             >
               <div
                 className={cn("w-full rounded-sm transition-all", bgClass)}
-                // Capped at 75% so the tooltip never hits the ceiling and gets clipped off
                 style={{
                   height: `${Math.max(5, Math.min(75, stat.total * 15))}%`,
                 }}
@@ -1597,29 +1555,32 @@ const Roadmap = () => {
                 <div className="w-full h-1 bg-white mt-1 rounded-full shrink-0" />
               )}
 
-              {/* Tooltip showing specific count breakdown */}
-              <div className="absolute bottom-[calc(100%+8px)] opacity-0 group-hover:opacity-100 bg-black border border-[#333] shadow-2xl text-white text-[10px] px-3 py-2 rounded-lg pointer-events-none whitespace-nowrap z-50 flex flex-col gap-1 transition-opacity duration-200">
-                <span className="font-extrabold border-b border-[#333] pb-1 mb-1">
+              <div className="absolute bottom-[calc(100%+12px)] opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 bg-[#0a0a0a]/95 backdrop-blur-xl border border-[#222] shadow-[0_20px_50px_rgba(0,0,0,0.8)] text-white text-xs px-4 py-3 rounded-xl pointer-events-none whitespace-nowrap z-[100] flex flex-col gap-1.5 transition-all duration-300">
+                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0a0a0a] border-b border-r border-[#222] rotate-45" />
+
+                <span className="font-extrabold border-b border-[#333] pb-1.5 mb-1 text-center tracking-wide">
                   {date.toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                   })}
                 </span>
-                <span className="text-[#888]">
-                  <span className="text-[#4ade80] font-bold">
+                <span className="text-[#888] flex justify-between gap-6">
+                  <span>Sub-Tasks</span>{" "}
+                  <span className="text-[#4ade80] font-extrabold">
                     {stat.subTasks}
-                  </span>{" "}
-                  Sub-Tasks
+                  </span>
                 </span>
-                <span className="text-[#888]">
-                  <span className="text-[#16a34a] font-bold">
+                <span className="text-[#888] flex justify-between gap-6">
+                  <span>Branches</span>{" "}
+                  <span className="text-[#16a34a] font-extrabold">
                     {stat.branches}
-                  </span>{" "}
-                  Branches
+                  </span>
                 </span>
-                <span className="text-[#888]">
-                  <span className="text-[#14532d] font-bold">{stat.cores}</span>{" "}
-                  Cores
+                <span className="text-[#888] flex justify-between gap-6">
+                  <span>Cores</span>{" "}
+                  <span className="text-[#14532d] font-extrabold">
+                    {stat.cores}
+                  </span>
                 </span>
               </div>
             </div>
@@ -1779,7 +1740,7 @@ const Roadmap = () => {
   };
 
   return (
-    <div className="bg-[#030303] min-h-screen text-white selection:bg-white selection:text-black pb-20">
+    <div className="bg-[#030303] min-h-screen w-full overflow-x-clip text-white selection:bg-white selection:text-black pb-20">
       {/* HEADER */}
       <div className="max-w-[1600px] mx-auto px-4 md:px-12 pt-10 md:pt-12 pb-6 md:pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-8 relative z-20">
         <div>
@@ -1791,10 +1752,11 @@ const Roadmap = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto relative">
-          <div className="relative w-full md:w-64" ref={dropdownRef}>
+          {/* Changed w-full to flex-1 min-w-0 to perfectly share the row without stretching */}
+          <div className="relative flex-1 min-w-0 md:w-64" ref={dropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-full flex items-center justify-between gap-4 bg-[#0a0a0a] border border-[#222] px-4 md:px-6 py-3 md:py-4 rounded-full font-bold text-xs md:text-sm text-white hover:border-[#444] transition-colors"
+              className="w-full flex items-center justify-between gap-2 bg-[#0a0a0a] border border-[#222] px-4 md:px-6 py-3 md:py-4 rounded-full font-bold text-xs md:text-sm text-white hover:border-[#444] transition-colors"
             >
               <span className="truncate">{timeframe}</span>{" "}
               <ChevronDown className="w-4 h-4 text-[#666] shrink-0" />
@@ -2142,7 +2104,7 @@ const Roadmap = () => {
               </div>
               <Activity className="w-6 h-6 md:w-8 md:h-8 text-[#444]" />
             </div>
-            <div className="flex-1 min-h-[100px]">
+            <div className="flex-1 min-h-[100px] min-w-0 overflow-hidden w-full relative">
               <InsightsChart />
             </div>
           </div>
@@ -2223,7 +2185,7 @@ const Roadmap = () => {
       </div>
 
       {/* TOAST SYSTEM (Bottom Left Pop-ups) */}
-      <div className="fixed bottom-4 md:bottom-6 left-4 md:left-6 z-[200] flex flex-col gap-2 pointer-events-none w-[calc(100vw-32px)] md:w-auto">
+      <div className="fixed bottom-4 md:bottom-6 left-4 right-4 md:left-6 md:right-auto z-[200] flex flex-col gap-2 pointer-events-none">
         <AnimatePresence>
           {toasts.map((t) => (
             <motion.div
