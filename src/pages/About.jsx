@@ -168,7 +168,7 @@ const About = () => {
             <div className="flex items-center gap-0">
               <Link to="/">
                 <img
-                  src="/logo.png"
+                  src="/logo-no-bg-white.png"
                   alt="Discotive Logo"
                   className="h-8 md:h-10 w-auto object-contain hover:scale-105 transition-transform duration-300"
                 />
@@ -178,9 +178,7 @@ const About = () => {
                 className="text-2xl font-extrabold tracking-tighter mr-10 cursor-none"
                 onMouseEnter={() => setIsHoveringCard(true)}
                 onMouseLeave={() => setIsHoveringCard(false)}
-              >
-                DISCOTIVE
-              </Link>
+              ></Link>
 
               <div className="hidden md:flex items-center gap-2">
                 <AnimatedButton

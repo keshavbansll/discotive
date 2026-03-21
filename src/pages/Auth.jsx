@@ -1413,7 +1413,7 @@ const Auth = () => {
             className="flex items-center gap-3 mb-16 hover:opacity-80 transition-opacity w-fit"
           >
             <img
-              src="/logo.png"
+              src="/logox.png"
               alt="Discotive"
               className="h-10 w-auto object-contain"
             />
