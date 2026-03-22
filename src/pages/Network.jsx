@@ -507,60 +507,41 @@ const Network = () => {
     if (!userData?.identity?.email) return;
 
     // onSnapshot creates a live WebSocket connection to the DB
-    const unsubscribe = onSnapshot(
-      collection(db, "users"),
-      (querySnapshot) => {
-        const rawUsers = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          rawUsers.push({
-            id: doc.id,
-            ...data,
-            _firstName: data.identity?.firstName || "Unknown",
-            _lastName: data.identity?.lastName || "",
-            _email: data.identity?.email || "",
-            _username:
-              data.identity?.username ||
-              data.identity?.email?.split("@")[0] ||
-              "user",
-            _initials:
-              `${data.identity?.firstName?.charAt(0) || ""}${data.identity?.lastName?.charAt(0) || ""}`.toUpperCase(),
-            _domain: data.vision?.passion || "Uncategorized",
-            _niche: data.vision?.niche || "Unspecified",
-            _location: data.footprint?.location || null,
-            _institution: data.baseline?.institution || null,
-            _score: data.discotiveScore || 0,
-            _level: Math.min(
-              Math.floor((data.discotiveScore || 0) / 1000) + 1,
-              10,
-            ),
-            _goal: data.vision?.goal3Months || "",
-            _skills:
-              data.skills?.alignedSkills?.length > 0
-                ? data.skills.alignedSkills
-                : data.skills?.rawSkills || [],
-          });
+    const unsubscribe = onSnapshot(collection(db, "users"), (querySnapshot) => {
+      const rawUsers = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        rawUsers.push({
+          id: doc.id,
+          ...data,
+          _firstName: data.identity?.firstName || "Unknown",
+          _lastName: data.identity?.lastName || "",
+          _email: data.identity?.email || "",
+          _username:
+            data.identity?.username ||
+            data.identity?.email?.split("@")[0] ||
+            "user",
+          _initials:
+            `${data.identity?.firstName?.charAt(0) || ""}${data.identity?.lastName?.charAt(0) || ""}`.toUpperCase(),
+          _domain: data.vision?.passion || "Uncategorized",
+          _niche: data.vision?.niche || "Unspecified",
+          _location: data.footprint?.location || null,
+          _institution: data.baseline?.institution || null,
+          _score: data.discotiveScore?.current ?? 0,
+          _level: Math.min(
+            Math.floor((data.discotiveScore?.current ?? 0) / 1000) + 1,
+            10,
+          ),
+          _goal: data.vision?.goal3Months || "",
+          _skills:
+            data.skills?.alignedSkills?.length > 0
+              ? data.skills.alignedSkills
+              : data.skills?.rawSkills || [],
         });
-
-        // Sort descending by score globally
-        const sorted = rawUsers.sort((a, b) => b._score - a._score);
-        setDbUsers(sorted);
-
-        // Smart Tab Routing: If Watchlist is empty on initial load, default to Global Arena
-        const me = sorted.find((u) => u._email === userData?.identity?.email);
-        if (me && (!me.watchlist || me.watchlist.length === 0)) {
-          setActiveTab((prev) =>
-            prev === "The Watchlist" ? "Global Arena" : prev,
-          );
-        }
-
+        setDbUsers(rawUsers);
         setIsFetching(false);
-      },
-      (error) => {
-        console.error("Network Sync Failed:", error);
-        setIsFetching(false);
-      },
-    );
+      });
+    });
 
     // Clean up the live listener when the component unmounts
     return () => unsubscribe();
@@ -622,26 +603,34 @@ const Network = () => {
     });
 
     try {
-      // Correct UI Update using setDbUsers
       setDbUsers((prev) =>
-        prev.map((user) => {
+        (prev || []).map((user) => {
+          if (!user) return user;
           if (user.id === myId)
             return {
               ...user,
-              outboundRequests: [...(user.outboundRequests || []), targetId],
+              outboundRequests: [
+                ...(Array.isArray(user.outboundRequests)
+                  ? user.outboundRequests
+                  : []),
+                targetId,
+              ],
             };
           if (user.id === targetId)
             return {
               ...user,
-              inboundRequests: [...(user.inboundRequests || []), myId],
+              inboundRequests: [
+                ...(Array.isArray(user.inboundRequests)
+                  ? user.inboundRequests
+                  : []),
+                myId,
+              ],
             };
           return user;
         }),
       );
 
       await batch.commit();
-
-      // SCORE ENGINE: The person receiving the request gets +1
       awardAllianceAction(targetId, "received_any");
     } catch (err) {
       console.error("Alliance request failed:", err);
@@ -662,32 +651,38 @@ const Network = () => {
     });
 
     try {
-      // Correct UI Update using setDbUsers
       setDbUsers((prev) =>
-        prev.map((user) => {
+        (prev || []).map((user) => {
+          if (!user) return user;
           if (user.id === myId)
             return {
               ...user,
-              allies: [...(user.allies || []), requesterId],
-              inboundRequests: (user.inboundRequests || []).filter(
-                (id) => id !== requesterId,
-              ),
+              allies: [
+                ...(Array.isArray(user.allies) ? user.allies : []),
+                requesterId,
+              ],
+              inboundRequests: (Array.isArray(user.inboundRequests)
+                ? user.inboundRequests
+                : []
+              ).filter((id) => id !== requesterId),
             };
           if (user.id === requesterId)
             return {
               ...user,
-              allies: [...(user.allies || []), myId],
-              outboundRequests: (user.outboundRequests || []).filter(
-                (id) => id !== myId,
-              ),
+              allies: [
+                ...(Array.isArray(user.allies) ? user.allies : []),
+                myId,
+              ],
+              outboundRequests: (Array.isArray(user.outboundRequests)
+                ? user.outboundRequests
+                : []
+              ).filter((id) => id !== myId),
             };
           return user;
         }),
       );
 
       await batch.commit();
-
-      // SCORE ENGINE: The person who originally sent the request gets +2 for success
       awardAllianceAction(requesterId, "sent_accepted");
     } catch (err) {
       console.error("Accept failed:", err);
@@ -706,30 +701,30 @@ const Network = () => {
     });
 
     try {
-      // Correct UI Update using setDbUsers
       setDbUsers((prev) =>
-        prev.map((user) => {
+        (prev || []).map((user) => {
+          if (!user) return user;
           if (user.id === myId)
             return {
               ...user,
-              inboundRequests: (user.inboundRequests || []).filter(
-                (id) => id !== requesterId,
-              ),
+              inboundRequests: (Array.isArray(user.inboundRequests)
+                ? user.inboundRequests
+                : []
+              ).filter((id) => id !== requesterId),
             };
           if (user.id === requesterId)
             return {
               ...user,
-              outboundRequests: (user.outboundRequests || []).filter(
-                (id) => id !== myId,
-              ),
+              outboundRequests: (Array.isArray(user.outboundRequests)
+                ? user.outboundRequests
+                : []
+              ).filter((id) => id !== myId),
             };
           return user;
         }),
       );
 
       await batch.commit();
-
-      // SCORE ENGINE: The person who sent the request gets penalized -1 for rejection
       awardAllianceAction(requesterId, "sent_rejected");
     } catch (err) {
       console.error("Reject failed:", err);

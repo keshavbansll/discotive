@@ -622,10 +622,13 @@ const MainLayout = () => {
                     {userData?.identity?.firstName}{" "}
                     {userData?.identity?.lastName}
                   </p>
+                  {/* --- FIX: Safely extract .current for the Math calculation --- */}
                   <p className="text-[10px] text-[#888] font-mono tracking-widest uppercase">
                     Lvl{" "}
                     {Math.min(
-                      Math.floor((userData?.discotiveScore || 0) / 1000) + 1,
+                      Math.floor(
+                        (userData?.discotiveScore?.current ?? 0) / 1000,
+                      ) + 1,
                       10,
                     )}{" "}
                     Operator
