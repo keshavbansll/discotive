@@ -479,11 +479,6 @@ const FlowCanvas = ({
     }
   };
 
-  const memoizedNodeTypes = useMemo(
-    () => ({ executionNode: ExecutionNode }),
-    [],
-  );
-
   const mappedNodes = useMemo(() => {
     return filteredNodes.map((n) => ({
       ...n,
@@ -723,7 +718,7 @@ const FlowCanvas = ({
       <ReactFlow
         nodes={mappedNodes}
         edges={mappedEdges}
-        nodeTypes={memoizedNodeTypes}
+        nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
