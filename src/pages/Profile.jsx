@@ -50,7 +50,7 @@ const Profile = () => {
   }
 
   const level = Math.min(
-    Math.floor((userData.discotiveScore || 0) / 1000) + 1,
+    Math.floor((userData.discotiveScore?.current ?? 0) / 1000) + 1,
     10,
   );
   const initials = `${userData.identity?.firstName?.charAt(0) || ""}${userData.identity?.lastName?.charAt(0) || ""}`;
@@ -133,7 +133,7 @@ const Profile = () => {
             </p>
             <p className="text-xl md:text-2xl font-extrabold flex items-center gap-2">
               <Zap className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />{" "}
-              {userData.discotiveScore || 0}
+              {userData.discotiveScore?.current ?? 0}
             </p>
           </div>
           <div className="bg-[#0a0a0a] border border-[#222] p-4 md:p-5 rounded-xl md:rounded-2xl">
