@@ -24,6 +24,7 @@ import ReactFlow, {
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 import "reactflow/dist/style.css";
+
 import {
   Calendar as CalendarIcon,
   Wand2,
@@ -69,6 +70,7 @@ import {
   generateCalibrationQuestions,
   generateExecutionMap,
 } from "../lib/gemini";
+import { awardTaskCompletion, awardNodeCompletion } from "../lib/scoreEngine";
 
 // ============================================================================
 // UTILITIES
@@ -855,32 +857,44 @@ const FlowCanvas = ({
 };
 
 // ============================================================================
-// MATHEMATICAL LAYOUT ENGINE (Spine & Branch Neural Web)
+// MATHEMATICAL LAYOUT ENGINE (Horizontal Spine & Branch Neural Web)
 // ============================================================================
 const generateWebLayout = (nodes) => {
-  const SPINE_X = 0; // Center spine
-  const Y_SPACING = 350; // Vertical distance
-  const BRANCH_OFFSET = 450; // Horizontal distance for side branches
+  const SPINE_Y = 0; // Base vertical center
+  const X_SPACING = 500; // Distance between Core nodes
+  const BRANCH_Y_OFFSET = 350; // Distance above/below spine for Branches
 
-  return nodes.map((node, index) => {
-    let xPos = SPINE_X;
-    let yPos = index * Y_SPACING;
+  let coreIndex = 0;
+  let branchIndexForCurrentCore = 0;
 
-    // Create a sprawling zig-zag or branching effect
-    // Main phases stay on the spine. Sub-tasks branch left/right.
-    if (node.data?.isBranch) {
-      // Alternate left and right for branches
-      xPos = index % 2 === 0 ? BRANCH_OFFSET : -BRANCH_OFFSET;
-      yPos = (index - 1) * Y_SPACING + Y_SPACING / 2; // Offset vertically between spine nodes
+  return nodes.map((node) => {
+    if (node.data?.nodeType === "branch") {
+      // Position branch horizontally relative to the LAST core node
+      const baseCoreX = (coreIndex > 0 ? coreIndex - 1 : 0) * X_SPACING;
+
+      // Push it slightly forward, and space out multiple branches if they exist
+      const xPos = baseCoreX + 250 + branchIndexForCurrentCore * 100;
+
+      // Alternate Top/Bottom of the spine
+      const yPos =
+        branchIndexForCurrentCore % 2 === 0
+          ? -BRANCH_Y_OFFSET
+          : BRANCH_Y_OFFSET;
+
+      branchIndexForCurrentCore++;
+      return { ...node, position: { x: xPos, y: yPos } };
     } else {
-      // Slight stagger on the spine to make it look organic
-      xPos = index % 2 === 0 ? 50 : -50;
-    }
+      // Core node marches straight down the horizontal spine
+      const xPos = coreIndex * X_SPACING;
 
-    return {
-      ...node,
-      position: { x: xPos, y: yPos },
-    };
+      // Slight vertical stagger for an organic "pulse" look
+      const yPos = coreIndex % 2 === 0 ? 50 : -50;
+
+      coreIndex++;
+      branchIndexForCurrentCore = 0; // Reset branches for the new core
+
+      return { ...node, position: { x: xPos, y: yPos } };
+    }
   });
 };
 
@@ -1000,8 +1014,8 @@ const Roadmap = () => {
       const newNodes = [];
       const newEdges = [];
 
-      // Calculate realistic deadlines starting from today
       let currentDate = new Date();
+      let lastCoreId = null; // Track the spine!
 
       aiData.phases.forEach((phase, index) => {
         const nodeId = `node_ai_${Date.now()}_${index}`;
@@ -1012,7 +1026,7 @@ const Roadmap = () => {
         newNodes.push({
           id: nodeId,
           type: "executionNode",
-          position: { x: 0, y: 0 }, // Math layout will override this
+          position: { x: 0, y: 0 },
           data: {
             title: phase.title,
             subtitle: phase.subtitle,
@@ -1029,20 +1043,29 @@ const Roadmap = () => {
           },
         });
 
-        // Connect this node to the previous one
+        // Neural Connection Logic
         if (index > 0) {
-          const prevNodeId = newNodes[index - 1].id;
+          // Connect to the LAST CORE NODE, not just the previous index!
+          const sourceId = lastCoreId || newNodes[0].id;
+
           newEdges.push({
-            id: `edge_${prevNodeId}-${nodeId}`,
-            source: prevNodeId,
+            id: `edge_${sourceId}-${nodeId}`,
+            source: sourceId,
             target: nodeId,
+            sourceHandle: "right-source", // Force output from the right
+            targetHandle: phase.nodeType === "branch" ? "top" : "left-target", // Force input to the left (or top for branches)
             animated: phase.nodeType === "branch",
             style: {
-              stroke: "#666",
-              strokeWidth: 2,
+              stroke: phase.nodeType === "branch" ? "#444" : "#888", // Dimmer lines for branches
+              strokeWidth: phase.nodeType === "branch" ? 1.5 : 2,
               strokeDasharray: phase.nodeType === "branch" ? "5,5" : "none",
             },
           });
+        }
+
+        // If this node is a core milestone, update the spine tracker
+        if (phase.nodeType !== "branch") {
+          lastCoreId = nodeId;
         }
       });
 
@@ -1464,16 +1487,23 @@ const Roadmap = () => {
 
   const handleSubtaskToggle = (taskId) => {
     const tasks = activeNode.data.tasks || [];
+    const taskToToggle = tasks.find((t) => t.id === taskId);
+    const willBeCompleted = !taskToToggle.completed; // The new state
+
     const updatedTasks = tasks.map((t) =>
-      t.id === taskId ? { ...t, completed: !t.completed } : t,
+      t.id === taskId ? { ...t, completed: willBeCompleted } : t,
     );
     updateActiveNode("tasks", updatedTasks);
 
-    const wasCompleted = !tasks.find((t) => t.id === taskId).completed;
-    if (wasCompleted) {
-      addToast("Task sequence executed.", "grey");
+    // FIRE SCORE ENGINE! (+5 or -5)
+    awardTaskCompletion(auth.currentUser?.uid || userData?.id, willBeCompleted);
+
+    if (willBeCompleted) {
+      addToast("Task sequence executed. +5 PTS", "green"); // Updated toast
       logDailyStat("task", 1);
       addLedgerEntry(`Executed sub-task in: ${activeNode.data.title}`);
+    } else {
+      addToast("Task sequence reversed. -5 PTS", "grey");
     }
   };
 
@@ -1497,15 +1527,26 @@ const Roadmap = () => {
       );
       setHasUnsavedChanges(true);
 
-      // Log the Node itself
       logDailyStat(activeNode.data.nodeType, 1);
 
-      // Log all unfinished tasks nested inside it
+      // --- FIRE SCORE ENGINE! ---
+      const uid = auth.currentUser?.uid || userData?.id;
+      // 1. Award points for any remaining unchecked subtasks (+5 each)
       if (incompleteTasksCount > 0) {
         logDailyStat("task", incompleteTasksCount);
+        for (let i = 0; i < incompleteTasksCount; i++)
+          awardTaskCompletion(uid, true);
       }
+      // 2. Award points for the node itself (+20 or +10)
+      awardNodeCompletion(uid, activeNode.data.nodeType);
 
-      addToast(`Milestone Secured: ${activeNode.data.title}`, "green");
+      const pts =
+        incompleteTasksCount * 5 +
+        (activeNode.data.nodeType === "core" ? 20 : 10);
+      addToast(
+        `Milestone Secured: ${activeNode.data.title} (+${pts} PTS)`,
+        "green",
+      );
       addLedgerEntry(`Completed Milestone: ${activeNode.data.title}`);
     }
   };

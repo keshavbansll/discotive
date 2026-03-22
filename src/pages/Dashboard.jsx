@@ -98,7 +98,7 @@ const Dashboard = () => {
 
         // Sort descending
         allScores.sort((a, b) => b - a);
-        const myScore = userData?.discotiveScore || 0;
+        const myScore = userData?.discotiveScore?.current || 0;
         const myRank = allScores.findIndex((score) => score <= myScore) + 1;
         const totalUsers = allScores.length || 1;
 
@@ -220,15 +220,45 @@ const Dashboard = () => {
                 <span className="text-[10px] font-bold text-[#666] uppercase tracking-widest block mb-1">
                   Discotive Score
                 </span>
-                <span className="text-2xl md:text-3xl font-extrabold text-white">
-                  {myScore === undefined || myScore === 0 ? "--" : myScore}
-                </span>
+                <div className="flex items-center justify-end gap-2">
+                  <span className="text-2xl md:text-3xl font-extrabold text-white">
+                    {userData?.discotiveScore?.current || 0}
+                  </span>
+
+                  {/* --- 24 HOUR DELTA ENGINE UI --- */}
+                  {(() => {
+                    const current = userData?.discotiveScore?.current || 0;
+                    const last24h = userData?.discotiveScore?.last24h || 0;
+                    const delta = current - last24h;
+
+                    if (delta === 0) return null;
+
+                    return (
+                      <div
+                        className={cn(
+                          "flex items-center text-xs font-extrabold px-2 py-1 rounded-md",
+                          delta > 0
+                            ? "bg-green-500/10 text-green-500"
+                            : "bg-red-500/10 text-red-500",
+                        )}
+                      >
+                        {delta > 0 ? (
+                          <TrendingUp className="w-3 h-3 mr-1" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 mr-1" />
+                        )}
+                        {delta > 0 ? "+" : ""}
+                        {delta}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
             <div>
               {isEngineLoading ? (
                 <Skeleton className="h-4 w-3/4 bg-[#222]" />
-              ) : myScore > 0 ? (
+              ) : (userData?.discotiveScore?.current || 0) > 0 ? (
                 <p className="text-sm text-[#888] font-medium leading-relaxed">
                   You are currently in the{" "}
                   <strong className="text-white">

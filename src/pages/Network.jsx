@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useUserData } from "../hooks/useUserData";
+import { awardAllianceAction } from "../lib/scoreEngine";
 import {
   Search,
   Filter,
@@ -624,6 +625,9 @@ const Network = () => {
         outboundRequests: [...currentUserObj.outboundRequests, targetId],
       });
       await batch.commit();
+
+      // SCORE ENGINE: The person receiving the request gets +1
+      awardAllianceAction(targetId, "received_any");
     } catch (err) {
       console.error("Alliance request failed:", err);
     }
@@ -649,6 +653,9 @@ const Network = () => {
         ),
       });
       await batch.commit();
+
+      // SCORE ENGINE: The person who originally sent the request gets +2 for success
+      awardAllianceAction(requesterId, "sent_accepted");
     } catch (err) {
       console.error("Accept failed:", err);
     }
@@ -671,6 +678,9 @@ const Network = () => {
         ),
       });
       await batch.commit();
+
+      // SCORE ENGINE: The person who sent the request gets penalized -1 for rejection
+      awardAllianceAction(requesterId, "sent_rejected");
     } catch (err) {
       console.error("Reject failed:", err);
     }

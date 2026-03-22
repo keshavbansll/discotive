@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useUserData } from "../hooks/useUserData";
+import { awardLeaderboardShift } from "../lib/scoreEngine";
 import {
   Filter,
   ChevronDown,
@@ -241,9 +242,17 @@ const Leaderboard = () => {
         });
 
         const sorted = rawUsers
-          .sort((a, b) => (b.discotiveScore || 0) - (a.discotiveScore || 0))
+          .sort(
+            (a, b) =>
+              (b.discotiveScore?.current || 0) -
+              (a.discotiveScore?.current || 0),
+          )
           .map((u, index) => {
-            const mockVelocity = Math.floor(Math.random() * 15) - 5;
+            // REAL VELOCITY ENGINE: Current Score minus Yesterday's Score
+            const realVelocity =
+              (u.discotiveScore?.current || 0) -
+              (u.discotiveScore?.last24h || 0);
+
             return {
               ...u,
               _globalRank: index + 1,
@@ -255,8 +264,8 @@ const Leaderboard = () => {
               _domain: u.vision?.passion || "Uncategorized",
               _niche: u.vision?.niche || "Unspecified",
               _location: u.footprint?.location || "Unknown",
-              _score: u.discotiveScore || 0,
-              _velocity: mockVelocity,
+              _score: u.discotiveScore?.current || 0,
+              _velocity: realVelocity, // <-- REAL DATA CONNECTED
             };
           });
         setDbUsers(sorted);
@@ -299,12 +308,91 @@ const Leaderboard = () => {
     1,
     Math.ceil(filteredLedger.length / filters.limit),
   );
+
   const currentUserObj = dbUsers.find(
     (u) => u._email === userData?.identity?.email,
   );
   const currentUserGlobalRank = currentUserObj
     ? currentUserObj._globalRank
     : -1;
+
+  // ============================================================================
+  // ENGINE 1: DAILY GLOBAL RANK TRACKER (+2 Up, -1 Down, Top 3 Global)
+  // ============================================================================
+  useEffect(() => {
+    const runGlobalAssessment = async () => {
+      if (!currentUserObj || !userData?.id || isFetching) return;
+
+      const today = new Date().toISOString().split("T")[0];
+      const lastCheck = userData?.telemetry?.lastGlobalRankDate;
+      const lastRank =
+        userData?.telemetry?.lastGlobalRank || currentUserGlobalRank;
+
+      if (lastCheck === today) return; // Already assessed today. Prevents infinite loops.
+
+      // Calculate position movement (e.g., Last rank was 10, current is 8 -> +2 movement)
+      const positionChange =
+        lastRank === currentUserGlobalRank
+          ? 0
+          : lastRank - currentUserGlobalRank;
+
+      // If they moved, or if they are currently sitting on the Global Podium (Top 3)
+      if (positionChange !== 0 || currentUserGlobalRank <= 3) {
+        awardLeaderboardShift(
+          userData.id,
+          positionChange,
+          currentUserGlobalRank,
+          true,
+        );
+      }
+
+      // Snapshot the rank for tomorrow's calculation
+      await updateDoc(doc(db, "users", userData.id), {
+        "telemetry.lastGlobalRankDate": today,
+        "telemetry.lastGlobalRank": currentUserGlobalRank,
+      });
+    };
+
+    runGlobalAssessment();
+  }, [isFetching, currentUserObj, userData?.id]);
+
+  // ============================================================================
+  // ENGINE 2: FILTERED DOMINANCE TRACKER (Top 3 in any specific niche)
+  // ============================================================================
+  useEffect(() => {
+    const runFilteredAssessment = async () => {
+      if (!currentUserObj || !userData?.id || isFetching) return;
+
+      // 1. Check if they actually applied a filter
+      const isFiltered =
+        filters.domain !== "All" ||
+        filters.niche !== "All" ||
+        filters.location !== "All";
+      if (!isFiltered) return;
+
+      // 2. Find their rank in THIS specific filtered view
+      const myFilteredRank =
+        filteredLedger.findIndex((u) => u.id === currentUserObj.id) + 1;
+
+      // 3. Only reward if they are Top 3 in this niche
+      if (myFilteredRank === 0 || myFilteredRank > 3) return;
+
+      const today = new Date().toISOString().split("T")[0];
+      const lastFilteredBonus = userData?.telemetry?.lastFilteredBonusDate;
+
+      // 4. Anti-Spam: Only ONE filtered bonus per day, regardless of how many filters they click
+      if (lastFilteredBonus === today) return;
+
+      // Fire engine! (+25, +15, +10)
+      awardLeaderboardShift(userData.id, 0, myFilteredRank, false);
+
+      await updateDoc(doc(db, "users", userData.id), {
+        "telemetry.lastFilteredBonusDate": today,
+      });
+    };
+
+    runFilteredAssessment();
+  }, [filteredLedger, filters, currentUserObj, userData?.id]);
 
   // --- SMART AUTO-PAGINATION ---
   // Default to the page where the current user resides whenever filters update

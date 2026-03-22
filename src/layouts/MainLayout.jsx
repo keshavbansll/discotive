@@ -41,6 +41,7 @@ import {
   Moon,
 } from "lucide-react";
 import { cn } from "../components/ui/BentoCard";
+import { processDailyLogin } from "../lib/scoreEngine";
 
 // --- NAVIGATION GROUPS ---
 const topNavItems = [
@@ -80,6 +81,13 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { userData, loading } = useUserData();
+
+  // --- TRIGGER DAILY SCORE ENGINE ---
+  useEffect(() => {
+    if (userData?.id && !loading) {
+      processDailyLogin(userData.id);
+    }
+  }, [userData?.id, loading]);
 
   // --- STRICT CLICK-OUTSIDE REFS ---
   const profileMenuRef = useRef(null);
@@ -524,7 +532,7 @@ const MainLayout = () => {
         </header>
 
         {/* --- MAIN PAGE CONTENT OUTLET (Behind dropdowns, above background) --- */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-0 custom-scrollbar">
           <Outlet />
         </main>
       </div>
