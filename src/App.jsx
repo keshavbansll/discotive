@@ -65,13 +65,11 @@ function App() {
             }
           />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/:handle" element={<PublicProfile />} />
           <Route path="/about" element={<About />} />
           <Route path="/premium" element={<Premium />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/verify-asset" element={<VerifyAsset />} />
-
-          {/* PUBLIC PROFILE ROUTE (Accessible to anyone, but uses /app/ prefix) */}
-          <Route path="/app/:username" element={<PublicProfile />} />
 
           <Route
             path="/app"

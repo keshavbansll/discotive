@@ -8,6 +8,8 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  FacebookAuthProvider,
+  OAuthProvider,
 } from "firebase/auth";
 import {
   collection,
@@ -1045,6 +1047,50 @@ const GoogleAuthButton = ({ onClick, disabled }) => (
   </button>
 );
 
+const FacebookAuthButton = ({ onClick, disabled }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#121212] border border-white/10 text-white font-bold rounded-xl hover:bg-[#222] hover:border-white/20 transition-all shadow-sm disabled:opacity-50"
+  >
+    {disabled ? (
+      <Loader2 className="w-5 h-5 animate-spin text-[#888]" />
+    ) : (
+      <svg
+        className="w-5 h-5 text-[#1877F2]"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+      </svg>
+    )}
+    Facebook
+  </button>
+);
+
+const AppleAuthButton = ({ onClick, disabled }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#121212] border border-white/10 text-white font-bold rounded-xl hover:bg-[#222] hover:border-white/20 transition-all shadow-sm disabled:opacity-50"
+  >
+    {disabled ? (
+      <Loader2 className="w-5 h-5 animate-spin text-[#888]" />
+    ) : (
+      <svg
+        className="w-5 h-5 text-white"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.56-1.702z" />
+      </svg>
+    )}
+    Apple
+  </button>
+);
+
 // ============================================================================
 // MAIN AUTH COMPONENT
 // ============================================================================
@@ -1209,10 +1255,18 @@ const Auth = () => {
     return () => clearTimeout(t);
   }, [username]);
 
-  const handleGoogleAuth = async () => {
+  // --- UNIFIED SOCIAL AUTH ENGINE (Google, Facebook, Apple) ---
+  const handleSocialAuth = async (providerType) => {
     try {
-      setLoading(true); // <--- Use setLoading instead of setIsBooting
-      const provider = new GoogleAuthProvider();
+      setLoading(true);
+      let provider;
+
+      if (providerType === "google") provider = new GoogleAuthProvider();
+      else if (providerType === "facebook")
+        provider = new FacebookAuthProvider();
+      else if (providerType === "apple")
+        provider = new OAuthProvider("apple.com");
+
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
@@ -1221,27 +1275,31 @@ const Auth = () => {
         : ["Operator", ""];
       setFirstName(nameParts[0]);
       setLastName(nameParts.slice(1).join(" "));
-      setEmail(user.email);
-      setUsername(user.email.split("@")[0].toLowerCase());
+
+      // Apple allows users to hide their email. If hidden, Firebase generates a proxy email.
+      const safeEmail = user.email || `${user.uid}@privaterelay.appleid.com`;
+      setEmail(safeEmail);
+      setUsername(safeEmail.split("@")[0].toLowerCase());
 
       // 1. Check if user already exists in DB
       const userSnap = await getDocs(
         query(
           collection(db, "users"),
-          where("identity.email", "==", user.email),
+          where("identity.email", "==", safeEmail),
         ),
       );
+
       if (!userSnap.empty) {
         setLoading(false);
         navigate("/app");
         return;
       }
 
-      // 2. Check Whitelist for new Google Users
+      // 2. Check Whitelist for new OAuth Users
       const wlSnap = await getDocs(
         query(
           collection(db, "whitelisted_emails"),
-          where("email", "==", user.email),
+          where("email", "==", safeEmail),
         ),
       );
 
@@ -1254,8 +1312,16 @@ const Auth = () => {
         setStep(2); // Bypass Step 1, go straight to Location/Handle
       }
     } catch (error) {
-      console.error("Google Auth Error:", error);
-      setError(error.message.replace("Firebase: ", ""));
+      console.error(`${providerType} Auth Error:`, error);
+
+      // Handle the "Account exists with different credential" error elegantly
+      if (error.code === "auth/account-exists-with-different-credential") {
+        setError(
+          "An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.",
+        );
+      } else {
+        setError(error.message.replace("Firebase: ", ""));
+      }
       setLoading(false);
     }
   };
@@ -1579,11 +1645,23 @@ const Auth = () => {
                   </div>
                 )}
 
-                {/* --- GOOGLE LOGIN --- */}
-                <GoogleAuthButton
-                  onClick={handleGoogleAuth}
-                  disabled={loading}
-                />
+                {/* --- OAUTH PROVIDERS --- */}
+                <div className="space-y-3">
+                  <GoogleAuthButton
+                    onClick={() => handleSocialAuth("google")}
+                    disabled={loading}
+                  />
+                  <div className="flex gap-3">
+                    <FacebookAuthButton
+                      onClick={() => handleSocialAuth("facebook")}
+                      disabled={loading}
+                    />
+                    <AppleAuthButton
+                      onClick={() => handleSocialAuth("apple")}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
 
                 <div className="flex items-center gap-4 my-6">
                   <div className="h-px bg-[#222] flex-1"></div>
@@ -1666,11 +1744,23 @@ const Auth = () => {
                   </div>
                 )}
 
-                {/* --- GOOGLE SIGNUP --- */}
-                <GoogleAuthButton
-                  onClick={handleGoogleAuth}
-                  disabled={loading}
-                />
+                {/* --- OAUTH PROVIDERS --- */}
+                <div className="space-y-3">
+                  <GoogleAuthButton
+                    onClick={() => handleSocialAuth("google")}
+                    disabled={loading}
+                  />
+                  <div className="flex gap-3">
+                    <FacebookAuthButton
+                      onClick={() => handleSocialAuth("facebook")}
+                      disabled={loading}
+                    />
+                    <AppleAuthButton
+                      onClick={() => handleSocialAuth("apple")}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
 
                 <div className="flex items-center gap-4 my-6"></div>
 
