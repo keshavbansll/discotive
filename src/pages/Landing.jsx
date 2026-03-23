@@ -348,7 +348,7 @@ const InteractiveTimelineSandbox = () => {
 // ============================================================================
 // 3. THE NAVBAR (Apple-Tier Sleekness)
 // ============================================================================
-const Navbar = ({ setIsHoveringCard }) => {
+const Navbar = ({ setIsHoveringCard, isInstallable, handleInstallClick }) => {
   const navigate = useNavigate();
   return (
     <motion.nav
@@ -397,6 +397,16 @@ const Navbar = ({ setIsHoveringCard }) => {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* THE INSTALL BUTTON */}
+          {isInstallable && (
+            <button
+              onClick={handleInstallClick}
+              className="hidden lg:flex items-center gap-2 px-4 py-2 bg-amber-500 text-black font-extrabold text-[10px] uppercase tracking-widest rounded-xl hover:bg-amber-400 transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+            >
+              <Zap className="w-3 h-3 fill-current" />
+              Install App
+            </button>
+          )}
           <Link
             to="/auth"
             className="hidden md:flex text-[11px] font-extrabold text-white hover:text-[#ccc] transition-colors uppercase tracking-[0.2em]"
@@ -423,6 +433,35 @@ const Landing = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHoveringCard, setIsHoveringCard] = useState(false);
   const navigate = useNavigate();
+
+  // --- ADD THIS PWA LOGIC ---
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () =>
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   useEffect(() => {
     const handleMouseMove = (e) =>
@@ -458,7 +497,11 @@ const Landing = () => {
 
       <div className="min-h-screen bg-[#030303] text-white selection:bg-white selection:text-black font-sans overflow-x-hidden">
         <ParticleBackground />
-        <Navbar setIsHoveringCard={setIsHoveringCard} />
+        <Navbar
+          setIsHoveringCard={setIsHoveringCard}
+          isInstallable={isInstallable}
+          handleInstallClick={handleInstallClick}
+        />
 
         {/* --- HERO SECTION --- */}
         <div className="relative pt-40 pb-20 md:pt-48 md:pb-32 px-6 flex flex-col items-center justify-center text-center min-h-screen">
