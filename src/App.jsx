@@ -8,11 +8,11 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import MainLayout from "./layouts/MainLayout";
-import Dashboard from "./pages/Dashboard";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
 import Roadmap from "./pages/Roadmap";
-import Leaderboard from "./pages/Leaderboard";
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 import Opportunities from "./pages/Opportunities";
-import Vault from "./pages/Vault";
+const Vault = lazy(() => import("./pages/Vault"));
 import Hubs from "./pages/Hubs";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
@@ -24,6 +24,8 @@ import Checkout from "./pages/Checkout";
 import VerifyAsset from "./pages/VerifyAsset";
 import PageTracker from "./components/PageTracker";
 import EditProfile from "./pages/EditProfile";
+
+import React, { Suspense, lazy } from "react";
 
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
@@ -55,61 +57,66 @@ function App() {
     <AuthProvider>
       <Router>
         <PageTracker />
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <PublicRoute>
-                <Landing />
-              </PublicRoute>
-            }
-          />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/:handle" element={<PublicProfile />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/premium" element={<Premium />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/verify-asset" element={<VerifyAsset />} />
+        <Suspense fallback={<GlobalLoader onComplete={() => {}} />}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <PublicRoute>
+                  <Landing />
+                </PublicRoute>
+              }
+            />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/:handle" element={<PublicProfile />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/premium" element={<Premium />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/verify-asset" element={<VerifyAsset />} />
 
-          <Route
-            path="/app"
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="roadmap" element={<Roadmap />} />
-            <Route path="leaderboard" element={<Leaderboard />} />
             <Route
-              path="opportunities"
-              element={<ComingSoon title="Opportunities" />}
-            />
-            <Route path="vault" element={<Vault />} />
-            <Route path="hubs" element={<ComingSoon title="Hubs" />} />
-            {/* PROFILE ROUTES */}
-            <Route path="profile" element={<Profile />} />
-            <Route path="profile/edit" element={<EditProfile />} />{" "}
-            {/* NEW ROUTE */}
-            <Route path="settings" element={<Settings />} />
-            <Route
-              path="finance"
-              element={<ComingSoon title="Financial Ledger" />}
-            />
-            <Route path="network" element={<Network />} />
-            <Route path="learn" element={<ComingSoon title="learn" />} />
-            <Route
-              path="podcasts"
-              element={<ComingSoon title="Podcasts & Media" />}
-            />
-            <Route
-              path="assessments"
-              element={<ComingSoon title="Workshops & Assessments" />}
-            />
-            <Route path="discover" element={<ComingSoon title="Discover" />} />
-          </Route>
-        </Routes>
+              path="/app"
+              element={
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="roadmap" element={<Roadmap />} />
+              <Route path="leaderboard" element={<Leaderboard />} />
+              <Route
+                path="opportunities"
+                element={<ComingSoon title="Opportunities" />}
+              />
+              <Route path="vault" element={<Vault />} />
+              <Route path="hubs" element={<ComingSoon title="Hubs" />} />
+              {/* PROFILE ROUTES */}
+              <Route path="profile" element={<Profile />} />
+              <Route path="profile/edit" element={<EditProfile />} />{" "}
+              {/* NEW ROUTE */}
+              <Route path="settings" element={<Settings />} />
+              <Route
+                path="finance"
+                element={<ComingSoon title="Financial Ledger" />}
+              />
+              <Route path="network" element={<Network />} />
+              <Route path="learn" element={<ComingSoon title="learn" />} />
+              <Route
+                path="podcasts"
+                element={<ComingSoon title="Podcasts & Media" />}
+              />
+              <Route
+                path="assessments"
+                element={<ComingSoon title="Workshops & Assessments" />}
+              />
+              <Route
+                path="discover"
+                element={<ComingSoon title="Discover" />}
+              />
+            </Route>
+          </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );

@@ -10,8 +10,9 @@ export default defineConfig({
       injectRegister: "auto",
       includeAssets: ["logo-no-bg-white.png"],
       workbox: {
+        cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4000000,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,json}"],
       },
       devOptions: {
         enabled: true,
@@ -19,6 +20,9 @@ export default defineConfig({
       },
       // ----------------------
       manifest: {
+        start_url: "/",
+        scope: "/",
+        display: "standalone",
         name: "Discotive OS",
         short_name: "Discotive",
         description: "The ultimate career engine and execution protocol.",
