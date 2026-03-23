@@ -4,6 +4,8 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import GlobalLoader from "./components/GlobalLoader";
+import React, { Suspense, lazy } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -24,9 +26,6 @@ import Checkout from "./pages/Checkout";
 import VerifyAsset from "./pages/VerifyAsset";
 import PageTracker from "./components/PageTracker";
 import EditProfile from "./pages/EditProfile";
-
-import GlobalLoader from "./components/GlobalLoader";
-import React, { Suspense, lazy } from "react";
 
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
