@@ -396,15 +396,16 @@ const Navbar = ({ setIsHoveringCard, isInstallable, handleInstallClick }) => {
           </Link>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* THE INSTALL BUTTON */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* THE INSTALL BUTTON (Now responsive for mobile) */}
           {isInstallable && (
             <button
               onClick={handleInstallClick}
-              className="hidden lg:flex items-center gap-2 px-4 py-2 bg-amber-500 text-black font-extrabold text-[10px] uppercase tracking-widest rounded-xl hover:bg-amber-400 transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+              className="flex items-center gap-1.5 px-3 py-2 sm:px-4 bg-amber-500 text-black font-extrabold text-[10px] uppercase tracking-widest rounded-xl hover:bg-amber-400 transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] whitespace-nowrap"
             >
               <Zap className="w-3 h-3 fill-current" />
-              Install App
+              <span className="hidden sm:block">Install App</span>
+              <span className="block sm:hidden">Install</span>
             </button>
           )}
           <Link
@@ -415,9 +416,10 @@ const Navbar = ({ setIsHoveringCard, isInstallable, handleInstallClick }) => {
           </Link>
           <AnimatedButton
             onClick={() => navigate("/auth")}
-            className="scale-90 sm:scale-100 shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+            className="scale-90 sm:scale-100 shadow-[0_0_30px_rgba(255,255,255,0.1)] whitespace-nowrap"
           >
-            Initialize Protocol
+            <span className="hidden sm:block">Initialize Protocol</span>
+            <span className="block sm:hidden">Boot OS</span>
           </AnimatedButton>
         </div>
       </div>
@@ -866,38 +868,38 @@ const Landing = () => {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white opacity-[0.01] blur-[120px] rounded-full pointer-events-none" />
 
           <div className="max-w-7xl mx-auto relative z-10">
-            {/* Main Links Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 md:gap-8 gap-12 mb-20">
-              {/* Brand Column */}
-              <div className="md:col-span-1 flex flex-col items-center md:items-start text-center md:text-left">
+            {/* Main Links Grid (Left-Aligned, 2-Column on Mobile) */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-x-8 gap-y-12 mb-20">
+              {/* Brand Column (Spans full width on mobile) */}
+              <div className="col-span-2 md:col-span-2 flex flex-col items-start text-left">
                 <Link to="/" className="flex items-center gap-3 mb-6">
                   <img
                     src="/logox.png"
                     alt="Discotive Logo"
-                    className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                    className="w-10 h-10 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                   />
                   <span className="text-xl font-extrabold tracking-tight text-white">
                     Discotive
                   </span>
                 </Link>
-                <p className="text-sm text-[#666] leading-relaxed max-w-[250px]">
+                <p className="text-sm text-[#666] leading-relaxed max-w-[280px]">
                   The execution protocol for elite operators. Replace your
                   resume. Build your monopoly.
                 </p>
               </div>
 
               {/* Platform Column */}
-              <div className="flex flex-col items-center md:items-start">
-                <h4 className="text-white font-extrabold text-xs mb-6 uppercase tracking-widest">
+              <div className="col-span-1 flex flex-col items-start text-left">
+                <h4 className="text-white font-extrabold text-[10px] sm:text-xs mb-6 uppercase tracking-widest">
                   Platform
                 </h4>
-                <ul className="space-y-4 text-center md:text-left">
+                <ul className="space-y-4">
                   <li>
                     <Link
                       to="/features"
                       className="text-sm font-medium text-[#888] hover:text-white transition-colors"
                     >
-                      Ecosystem Features
+                      Features
                     </Link>
                   </li>
                   <li>
@@ -913,18 +915,18 @@ const Landing = () => {
                       to="/premium"
                       className="text-sm font-medium text-[#888] hover:text-white transition-colors"
                     >
-                      Clearance Pricing
+                      Pricing
                     </Link>
                   </li>
                 </ul>
               </div>
 
               {/* Resources Column */}
-              <div className="flex flex-col items-center md:items-start">
-                <h4 className="text-white font-extrabold text-xs mb-6 uppercase tracking-widest">
+              <div className="col-span-1 flex flex-col items-start text-left">
+                <h4 className="text-white font-extrabold text-[10px] sm:text-xs mb-6 uppercase tracking-widest">
                   Resources
                 </h4>
-                <ul className="space-y-4 text-center md:text-left">
+                <ul className="space-y-4">
                   <li>
                     <Link
                       to="/about"
@@ -943,18 +945,19 @@ const Landing = () => {
                   </li>
                 </ul>
               </div>
-              {/* Contact Column */}
-              <div className="flex flex-col items-center md:items-start">
-                <h4 className="text-white font-extrabold text-xs mb-6 uppercase tracking-widest">
+
+              {/* Contact Column (Spans full width on mobile) */}
+              <div className="col-span-2 md:col-span-1 flex flex-col items-start text-left mt-2 md:mt-0">
+                <h4 className="text-white font-extrabold text-[10px] sm:text-xs mb-6 uppercase tracking-widest">
                   Contact
                 </h4>
-                <ul className="space-y-4 text-center md:text-left">
+                <ul className="space-y-4">
                   <li>
                     <a
                       href="mailto:discotive@gmail.com"
                       className="text-sm font-medium text-[#888] hover:text-white transition-colors flex items-center gap-2"
                     >
-                      <Mail className="w-4 h-4 text-[#555] hidden md:block" />
+                      <Mail className="w-4 h-4 text-[#555]" />
                       discotive@gmail.com
                     </a>
                   </li>
@@ -962,8 +965,8 @@ const Landing = () => {
               </div>
             </div>
 
-            {/* Bottom Bar (Copyright & Socials) */}
-            <div className="flex flex-col-reverse md:flex-row items-center justify-between pt-8 border-t border-white/5 gap-6">
+            {/* Bottom Bar (Responsive Stacking) */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between pt-8 border-t border-white/5 gap-6">
               <p className="text-xs text-[#555] font-medium tracking-wide">
                 © 2026 Discotive. India.
               </p>
@@ -972,7 +975,7 @@ const Landing = () => {
                   href="https://www.instagram.com/discotive/"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[#666] hover:text-white transition-colors hover:scale-110 transform duration-200"
+                  className="text-[#666] hover:text-white transition-colors"
                 >
                   <Instagram className="w-5 h-5" />
                 </a>
@@ -980,7 +983,7 @@ const Landing = () => {
                   href="https://www.youtube.com/@discotive"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[#666] hover:text-white transition-colors hover:scale-110 transform duration-200"
+                  className="text-[#666] hover:text-white transition-colors"
                 >
                   <Youtube className="w-5 h-5" />
                 </a>
@@ -988,7 +991,7 @@ const Landing = () => {
                   href="https://www.linkedin.com/company/discotive"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[#666] hover:text-white transition-colors hover:scale-110 transform duration-200"
+                  className="text-[#666] hover:text-white transition-colors"
                 >
                   <Linkedin className="w-5 h-5" />
                 </a>
