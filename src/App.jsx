@@ -26,6 +26,7 @@ import Checkout from "./pages/Checkout";
 import VerifyAsset from "./pages/VerifyAsset";
 import PageTracker from "./components/PageTracker";
 import EditProfile from "./pages/EditProfile";
+const Features = lazy(() => import("./pages/Features"));
 
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
@@ -70,6 +71,7 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/:handle" element={<PublicProfile />} />
             <Route path="/about" element={<About />} />
+            <Route path="/features" element={<Features />} />
             <Route path="/premium" element={<Premium />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/verify-asset" element={<VerifyAsset />} />
