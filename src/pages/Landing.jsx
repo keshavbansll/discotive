@@ -282,10 +282,13 @@ const InteractiveTimelineSandbox = () => {
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
 
+  const nodeTypes = useMemo(() => ({ executionNode: MockExecutionNode }), []);
+
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
     [],
   );
+
   const onEdgesChange = useCallback(
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [],
@@ -320,7 +323,7 @@ const InteractiveTimelineSandbox = () => {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          nodeTypes={mockNodeTypes}
+          nodeTypes={nodeTypes}
           fitView
           className="bg-[#030303]"
           proOptions={{ hideAttribution: true }}
@@ -432,7 +435,7 @@ const Landing = () => {
     };
   }, []);
 
-  if (isLoading) return <GlobalLoader />;
+  if (isLoading) return <GlobalLoader onComplete={() => {}} />;
 
   return (
     <>
