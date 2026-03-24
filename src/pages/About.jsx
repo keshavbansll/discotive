@@ -28,12 +28,12 @@ const BOARD_MEMBERS = [
   {
     id: "kb",
     name: "Keshav Bansal",
-    title: "Founder & Chief Architect",
+    title: "Co-Founder & Chief Architect",
     image: "/Keshav-Bansal.jpeg",
     bio: "The visionary behind the Discotive protocol. Engineering the algorithmic death of the traditional resume.",
     socials: {
-      linkedin: "https://www.linkedin.com/in/keshav-bansal/", // Update with your actual link
-      instagram: "https://instagram.com/keshav", // Update with your actual link
+      linkedin: "https://www.linkedin.com/in/keshavbansll/", // Update with your actual link
+      instagram: "https://instagram.com/keshavbansll", // Update with your actual link
     },
     color: "text-[#D4AF37]",
     border: "border-[#D4AF37]/30",
