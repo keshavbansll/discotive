@@ -39,7 +39,8 @@ import {
   doc,
   setDoc,
 } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { getApp } from "firebase/app";
+import { auth, db, storage } from "../firebase";
 import {
   ChevronRight,
   Loader2,

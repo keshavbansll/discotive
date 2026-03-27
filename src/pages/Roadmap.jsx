@@ -51,6 +51,7 @@ import ReactFlow, {
   getSmoothStepPath,
   BaseEdge,
   EdgeLabelRenderer,
+  NodeResizer,
 } from "reactflow";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
@@ -115,6 +116,22 @@ import {
   Code2,
   PenLine,
   Filter,
+  Linkedin,
+  Github,
+  Slack,
+  Mail,
+  FolderKanban,
+  LayoutGrid,
+  Move,
+  GripVertical,
+  Boxes,
+  Workflow,
+  PlugZap,
+  Rocket,
+  Trophy as TrophyIcon2,
+  BookMarked,
+  FlaskConical,
+  Pen,
 } from "lucide-react";
 import {
   Radar,
@@ -194,6 +211,160 @@ const NODE_ACCENT_PALETTE = {
     bg: "rgba(255,255,255,0.04)",
   },
 };
+
+/**
+ * @constant APP_CONNECTOR_REGISTRY
+ * @description
+ * Supported third-party career integrations for the Connector Node system.
+ * Each entry defines the app's visual identity, category, and action verbs.
+ * This registry powers the AppConnectorNode component and the pane context menu.
+ */
+const APP_CONNECTOR_REGISTRY = Object.freeze({
+  LinkedIn: {
+    color: "#0a66c2",
+    bg: "rgba(10,102,194,0.12)",
+    glow: "rgba(10,102,194,0.3)",
+    category: "Network",
+    defaultAction: "Post update / Connect",
+    icon: "Li",
+  },
+  GitHub: {
+    color: "#e6edf3",
+    bg: "rgba(230,237,243,0.06)",
+    glow: "rgba(230,237,243,0.2)",
+    category: "Code",
+    defaultAction: "Push commit / Open PR",
+    icon: "GH",
+  },
+  YouTube: {
+    color: "#ff0000",
+    bg: "rgba(255,0,0,0.10)",
+    glow: "rgba(255,0,0,0.25)",
+    category: "Learn",
+    defaultAction: "Watch lesson / Publish",
+    icon: "YT",
+  },
+  Unstop: {
+    color: "#f97316",
+    bg: "rgba(249,115,22,0.12)",
+    glow: "rgba(249,115,22,0.3)",
+    category: "Compete",
+    defaultAction: "Register hackathon",
+    icon: "Un",
+  },
+  Notion: {
+    color: "#ffffff",
+    bg: "rgba(255,255,255,0.05)",
+    glow: "rgba(255,255,255,0.15)",
+    category: "Docs",
+    defaultAction: "Update knowledge base",
+    icon: "No",
+  },
+  Figma: {
+    color: "#a259ff",
+    bg: "rgba(162,89,255,0.12)",
+    glow: "rgba(162,89,255,0.3)",
+    category: "Design",
+    defaultAction: "Design component",
+    icon: "Fi",
+  },
+  Gmail: {
+    color: "#ea4335",
+    bg: "rgba(234,67,53,0.10)",
+    glow: "rgba(234,67,53,0.25)",
+    category: "Comms",
+    defaultAction: "Send cold email",
+    icon: "Gm",
+  },
+  Slack: {
+    color: "#e01e5a",
+    bg: "rgba(224,30,90,0.10)",
+    glow: "rgba(224,30,90,0.25)",
+    category: "Comms",
+    defaultAction: "Message team",
+    icon: "Sl",
+  },
+  Coursera: {
+    color: "#0056d2",
+    bg: "rgba(0,86,210,0.12)",
+    glow: "rgba(0,86,210,0.3)",
+    category: "Learn",
+    defaultAction: "Complete module",
+    icon: "Co",
+  },
+  LeetCode: {
+    color: "#ffa116",
+    bg: "rgba(255,161,22,0.12)",
+    glow: "rgba(255,161,22,0.3)",
+    category: "Practice",
+    defaultAction: "Solve problem",
+    icon: "Lc",
+  },
+  HackerRank: {
+    color: "#00ea64",
+    bg: "rgba(0,234,100,0.08)",
+    glow: "rgba(0,234,100,0.2)",
+    category: "Practice",
+    defaultAction: "Pass challenge",
+    icon: "Hr",
+  },
+  Behance: {
+    color: "#053eff",
+    bg: "rgba(5,62,255,0.12)",
+    glow: "rgba(5,62,255,0.3)",
+    category: "Portfolio",
+    defaultAction: "Publish case study",
+    icon: "Be",
+  },
+  Dribbble: {
+    color: "#ea4c89",
+    bg: "rgba(234,76,137,0.12)",
+    glow: "rgba(234,76,137,0.3)",
+    category: "Portfolio",
+    defaultAction: "Upload shot",
+    icon: "Dr",
+  },
+  ProductHunt: {
+    color: "#da552f",
+    bg: "rgba(218,85,47,0.12)",
+    glow: "rgba(218,85,47,0.3)",
+    category: "Launch",
+    defaultAction: "Launch product",
+    icon: "PH",
+  },
+  Medium: {
+    color: "#ffffff",
+    bg: "rgba(255,255,255,0.04)",
+    glow: "rgba(255,255,255,0.12)",
+    category: "Write",
+    defaultAction: "Publish article",
+    icon: "Md",
+  },
+  Discord: {
+    color: "#5865f2",
+    bg: "rgba(88,101,242,0.12)",
+    glow: "rgba(88,101,242,0.3)",
+    category: "Comms",
+    defaultAction: "Join community",
+    icon: "Dc",
+  },
+  Calendly: {
+    color: "#006bff",
+    bg: "rgba(0,107,255,0.12)",
+    glow: "rgba(0,107,255,0.3)",
+    category: "Schedule",
+    defaultAction: "Schedule meeting",
+    icon: "Ca",
+  },
+  Custom: {
+    color: "#ca8a04",
+    bg: "rgba(202,138,4,0.10)",
+    glow: "rgba(202,138,4,0.25)",
+    category: "Custom",
+    defaultAction: "Configure trigger",
+    icon: "Cx",
+  },
+});
 
 /** @constant NODE_TAGS — Taxonomy labels for semantic filtering. */
 const NODE_TAGS = [
@@ -305,77 +476,180 @@ const sanitize = (raw = "") =>
  * Layer-crossing minimisation is approximate (greedy barycentric heuristic)
  * rather than optimal to keep O(n) complexity on large maps.
  */
+/**
+ * @function generateNeuralLayout
+ * @description
+ * Sugiyama-inspired DAG layout with:
+ *  — Per-type node dimension awareness (no overlap by design)
+ *  — Barycentric crossing-minimisation pass (forward sweep)
+ *  — Cumulative X positioning (each column = widest node + H_PAD)
+ *  — Centred Y positioning per layer (accounts for actual node heights)
+ *  — Orphan grid placed above the main DAG
+ *  — Freshly-generated nodes (position={x:0,y:0}) always get repositioned;
+ *    manually dragged nodes (any non-zero position) are preserved.
+ */
 const generateNeuralLayout = (nodes, edges) => {
   if (nodes.length === 0) return nodes;
 
-  const nodeMap = new Map(
-    nodes.map((n) => [n.id, { ...n, inDegree: 0, outNodes: [], layer: 0 }]),
+  /**
+   * Estimated rendered dimensions per node type (px).
+   * Use EXPANDED (uncollapsed) size to guarantee no overlap.
+   * Width is always fixed; height is the max expected expansion.
+   */
+  const NODE_DIM = {
+    executionNode: { w: 440, h: 420 },
+    radarWidget: { w: 320, h: 320 },
+    assetWidget: { w: 290, h: 190 },
+    videoWidget: { w: 360, h: 310 },
+    journalNode: { w: 380, h: 310 },
+    milestoneNode: { w: 280, h: 230 },
+    connectorNode: { w: 220, h: 170 },
+    groupNode: { w: 540, h: 460 },
+  };
+  const DEFAULT_DIM = { w: 360, h: 300 };
+
+  /** Minimum clear gap between columns and between rows. */
+  const H_PAD = 100; // horizontal gap between node columns
+  const V_PAD = 70; // vertical gap between nodes in same column
+
+  // --- Build adjacency metadata ---
+  const meta = new Map(
+    nodes.map((n) => [
+      n.id,
+      {
+        type: n.type,
+        layer: 0,
+        inDeg: 0,
+        children: [],
+        dim: NODE_DIM[n.type] || DEFAULT_DIM,
+      },
+    ]),
   );
 
   edges.forEach(({ source, target }) => {
-    if (nodeMap.has(target) && nodeMap.has(source)) {
-      nodeMap.get(target).inDegree++;
-      nodeMap.get(source).outNodes.push(target);
+    if (meta.has(source) && meta.has(target)) {
+      meta.get(target).inDeg++;
+      meta.get(source).children.push(target);
     }
   });
 
-  const orphans = [];
-  const connectedQueue = [];
-
-  // Separate orphans from the connected graph
-  nodeMap.forEach((node, id) => {
-    if (node.inDegree === 0 && node.outNodes.length === 0) {
-      orphans.push(id);
-    } else if (node.inDegree === 0) {
-      connectedQueue.push(id);
-    }
+  // Classify: orphans (totally disconnected) vs DAG roots
+  const orphanIds = [];
+  const roots = [];
+  meta.forEach((m, id) => {
+    if (m.inDeg === 0 && m.children.length === 0) orphanIds.push(id);
+    else if (m.inDeg === 0) roots.push(id);
   });
 
+  // --- BFS layer assignment ---
   let maxLayer = 0;
-  while (connectedQueue.length > 0) {
-    const currId = connectedQueue.shift();
-    const curr = nodeMap.get(currId);
-    curr.outNodes.forEach((tid) => {
-      const tgt = nodeMap.get(tid);
-      tgt.layer = Math.max(tgt.layer, curr.layer + 1);
-      maxLayer = Math.max(maxLayer, tgt.layer);
-      if (--tgt.inDegree === 0) connectedQueue.push(tid);
+  const queue = [...roots];
+  const visited = new Set(roots);
+  while (queue.length > 0) {
+    const id = queue.shift();
+    const m = meta.get(id);
+    m.children.forEach((cid) => {
+      const child = meta.get(cid);
+      child.layer = Math.max(child.layer, m.layer + 1);
+      maxLayer = Math.max(maxLayer, child.layer);
+      if (--child.inDeg === 0 && !visited.has(cid)) {
+        visited.add(cid);
+        queue.push(cid);
+      }
     });
   }
 
-  const layerBuckets = Array.from({ length: maxLayer + 1 }, () => []);
-  nodeMap.forEach((node, id) => {
-    if (!orphans.includes(id)) layerBuckets[node.layer].push(id);
+  // --- Bucket nodes by layer ---
+  const buckets = Array.from({ length: maxLayer + 1 }, () => []);
+  meta.forEach((m, id) => {
+    if (!orphanIds.includes(id)) buckets[m.layer].push(id);
   });
 
-  // TIGHTENED CONSTANTS
-  const X_GAP = 480;
-  const Y_GAP = 280;
-  const ORPHAN_COLS = 3;
-
-  return nodes.map((n) => {
-    // Leave manual placements alone unless requested
-    if (n.position.x !== 0 && n.position.y !== 0) return n;
-
-    if (orphans.includes(n.id)) {
-      const idx = orphans.indexOf(n.id);
-      const col = idx % ORPHAN_COLS;
-      const row = Math.floor(idx / ORPHAN_COLS);
-      return {
-        ...n,
-        position: { x: col * X_GAP, y: -(row + 1) * Y_GAP - 150 }, // Place grid above DAG
+  // --- Barycentric sort (one forward pass): minimise edge crossings ---
+  // Nodes in each layer are sorted by the average bucket-index of their parents.
+  for (let l = 1; l <= maxLayer; l++) {
+    buckets[l].sort((a, b) => {
+      const barycentre = (id) => {
+        const parentIdxs = [];
+        meta.forEach((m, pid) => {
+          if (m.children.includes(id)) {
+            const idx = buckets[l - 1].indexOf(pid);
+            if (idx !== -1) parentIdxs.push(idx);
+          }
+        });
+        if (parentIdxs.length === 0) return 0;
+        return parentIdxs.reduce((s, v) => s + v, 0) / parentIdxs.length;
       };
-    }
+      return barycentre(a) - barycentre(b);
+    });
+  }
 
-    const meta = nodeMap.get(n.id);
-    const bucket = layerBuckets[meta.layer];
-    const idx = bucket.indexOf(n.id);
-    const yCenter = ((bucket.length - 1) * Y_GAP) / 2;
+  // --- Compute X position of each layer column ---
+  // Each column starts after the previous column's max node width + H_PAD.
+  const layerX = [];
+  let curX = 0;
+  for (let l = 0; l <= maxLayer; l++) {
+    layerX.push(curX);
+    const maxW = buckets[l].reduce(
+      (w, id) => Math.max(w, (NODE_DIM[meta.get(id)?.type] || DEFAULT_DIM).w),
+      DEFAULT_DIM.w,
+    );
+    curX += maxW + H_PAD;
+  }
 
-    return {
-      ...n,
-      position: { x: meta.layer * X_GAP, y: idx * Y_GAP - yCenter },
-    };
+  // --- Compute Y position of each node within its layer ---
+  // Nodes are vertically centred as a group; gaps are based on actual heights.
+  const posMap = new Map();
+
+  for (let l = 0; l <= maxLayer; l++) {
+    const bucket = buckets[l];
+    // Total stack height for this layer
+    const totalH = bucket.reduce((sum, id) => {
+      return sum + (NODE_DIM[meta.get(id)?.type] || DEFAULT_DIM).h + V_PAD;
+    }, -V_PAD); // subtract the final extra V_PAD
+
+    let yOff = -totalH / 2;
+    bucket.forEach((id) => {
+      posMap.set(id, { x: layerX[l], y: yOff });
+      const dim = NODE_DIM[meta.get(id)?.type] || DEFAULT_DIM;
+      yOff += dim.h + V_PAD;
+    });
+  }
+
+  // --- Place orphans in a grid above the DAG ---
+  const ORPHAN_COLS = 4;
+  orphanIds.forEach((id, i) => {
+    const col = i % ORPHAN_COLS;
+    const row = Math.floor(i / ORPHAN_COLS);
+    const dim = NODE_DIM[meta.get(id)?.type] || DEFAULT_DIM;
+    posMap.set(id, {
+      x: col * (dim.w + H_PAD),
+      y: -(row + 1) * (dim.h + V_PAD) - 200,
+    });
+  });
+
+  // --- Map back to nodes ---
+  return nodes.map((n) => {
+    /**
+     * @description
+     * Preserve manually-dragged nodes: any node with a non-zero position
+     * that is NOT freshly AI-generated keeps its user-set coordinates.
+     * AI-generated nodes always start at {x:0, y:0} and get the layout.
+     * The `_freshlyGenerated` flag is set temporarily during generation
+     * and removed on the next save cycle.
+     */
+    const hasManualPos =
+      n.position &&
+      (Math.abs(n.position.x) > 0.5 || Math.abs(n.position.y) > 0.5) &&
+      !n.data?._freshlyGenerated;
+
+    if (hasManualPos) return n;
+
+    const pos = posMap.get(n.id);
+    if (!pos) return n;
+    // Strip the generation flag after positioning
+    const { _freshlyGenerated: _f, ...cleanData } = n.data || {};
+    return { ...n, position: pos, data: cleanData };
   });
 };
 
@@ -403,13 +677,23 @@ const NeuralEdge = ({
   data,
   selected,
 }) => {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  /**
+   * @description
+   * Smoothstep path: orthogonal routing with rounded corners.
+   * Prevents the "spaghetti" diagonal-crossing problem of pure bezier.
+   * borderRadius=16 gives the rounded n8n/ComfyUI-style corners.
+   * offset=60 ensures edges leave the source handle horizontally
+   * before turning, eliminating handle-area congestion.
+   */
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 16,
+    offset: 60,
   });
 
   const accent = data?.accent || "#ca8a04";
@@ -496,7 +780,7 @@ const NeuralEdge = ({
  *  – Verified asset-linkage badge on certification tasks
  *  – Pointer-events split: handles are interactive; body opens command center
  */
-const ExecutionNode = ({ data, selected, id }) => {
+const ExecutionNode = ({ data, selected, id, style: nodeStyle }) => {
   const [collapsed, setCollapsed] = useState(data.collapsed || false);
 
   const isCompleted = data.isCompleted;
@@ -545,27 +829,55 @@ const ExecutionNode = ({ data, selected, id }) => {
   return (
     <div
       className={cn(
-        "w-[420px] rounded-[32px] p-2 transition-all duration-500 backdrop-blur-2xl relative group",
-        // Fading Logic: Dim unselected/unconnected nodes
+        "rounded-[32px] p-2 transition-all duration-500 backdrop-blur-2xl relative group",
         data.isDimmed
           ? "opacity-20 grayscale pointer-events-none"
           : isFuture && !selected
             ? "opacity-60 bg-[#060606]/80 hover:bg-[#0a0a0c]"
             : "opacity-100 bg-[#0a0a0c]/90 hover:bg-[#0d0d0f]",
-        // Hover life & Scale
-        selected ? "scale-[1.03] z-50" : "scale-100 hover:scale-[1.01] z-10",
+        selected ? "scale-[1.02] z-50" : "scale-100 hover:scale-[1.005] z-10",
       )}
       style={{
-        // BORDERS REMOVED. Pure glow mathematics applied.
+        /**
+         * @description
+         * Width is driven by nodeStyle?.width when the user has resized via
+         * the NodeResizer handles. Falls back to 420px (the default).
+         * minWidth prevents the node from becoming unreadable.
+         */
+        width: nodeStyle?.width ?? 420,
+        minWidth: 320,
         boxShadow: selected
-          ? `0 0 80px ${accent.glow}, 0 30px 60px rgba(0,0,0,0.8)`
+          ? `0 0 0 1.5px ${accent.primary}, 0 0 80px ${accent.glow}, 0 30px 60px rgba(0,0,0,0.8)`
           : isCompleted
-            ? "0 0 30px rgba(16,185,129,0.1), 0 20px 40px rgba(0,0,0,0.4)"
+            ? "0 0 0 1px #10b981, 0 0 30px rgba(16,185,129,0.1), 0 20px 40px rgba(0,0,0,0.4)"
             : isActive
-              ? `0 0 40px ${accent.glow}, 0 20px 40px rgba(0,0,0,0.4)`
-              : "0 20px 40px rgba(0,0,0,0.4)",
+              ? `0 0 0 1px ${accent.primary}, 0 0 40px ${accent.glow}, 0 20px 40px rgba(0,0,0,0.4)`
+              : "0 0 0 1px #2a2a2a, 0 20px 40px rgba(0,0,0,0.4)",
       }}
     >
+      {/* ── NODE RESIZER: drag from corners to resize width ── */}
+      <NodeResizer
+        minWidth={320}
+        minHeight={160}
+        isVisible={selected}
+        lineStyle={{
+          border: `1.5px solid ${accent.primary}`,
+          borderStyle: "dashed",
+          opacity: 0.6,
+        }}
+        handleStyle={{
+          backgroundColor: accent.primary,
+          width: 10,
+          height: 10,
+          borderRadius: "50%",
+          border: "2.5px solid #030303",
+          boxShadow: `0 0 8px ${accent.glow}`,
+        }}
+        keepAspectRatio={false}
+        onResize={() => {
+          // Trigger re-render on resize so content reflows
+        }}
+      />
       <Handle
         type="target"
         position={Position.Top}
@@ -1223,6 +1535,222 @@ const MilestoneNode = ({ data, selected }) => {
 };
 
 // ============================================================================
+// § 11b. APP CONNECTOR NODE — Agentic Integration Hub
+// ============================================================================
+
+/**
+ * @component AppConnectorNode
+ * @description
+ * Compact n8n/ComfyUI-style node representing a connected external service.
+ * Color-coded per app, shows action label, live status dot, and resize handles.
+ * Bidirectional handles on all 4 sides for maximum routing flexibility.
+ */
+const AppConnectorNode = ({ id, data, selected, style: nodeStyle }) => {
+  const app = APP_CONNECTOR_REGISTRY[data.app] || APP_CONNECTOR_REGISTRY.Custom;
+
+  const isConnected = data.isConnected ?? false;
+
+  const handleStyle = {
+    background: "#111",
+    border: `2px solid ${app.color}`,
+    width: 12,
+    height: 12,
+    borderRadius: "50%",
+  };
+
+  return (
+    <div
+      style={{
+        width: nodeStyle?.width ?? 220,
+        minWidth: 180,
+        filter: selected ? `drop-shadow(0 0 14px ${app.glow})` : "none",
+        transition: "filter 0.25s",
+      }}
+    >
+      <NodeResizer
+        minWidth={180}
+        minHeight={110}
+        isVisible={selected}
+        lineStyle={{ border: `1.5px dashed ${app.color}`, opacity: 0.6 }}
+        handleStyle={{
+          backgroundColor: app.color,
+          width: 9,
+          height: 9,
+          borderRadius: "50%",
+          border: "2px solid #030303",
+        }}
+      />
+
+      {/* Handles — all 4 sides */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={handleStyle}
+        id="left"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={handleStyle}
+        id="right"
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={handleStyle}
+        id="top"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={handleStyle}
+        id="bottom"
+      />
+
+      {/* Card */}
+      <div
+        className="rounded-[20px] overflow-hidden transition-all duration-200"
+        style={{
+          background: `linear-gradient(135deg, ${app.bg}, rgba(5,5,8,0.97))`,
+          border: `1px solid ${selected ? app.color : app.color + "40"}`,
+          boxShadow: selected
+            ? `0 0 0 1px ${app.color}60, 0 20px 40px rgba(0,0,0,0.6)`
+            : "0 8px 24px rgba(0,0,0,0.5)",
+        }}
+      >
+        {/* Accent stripe */}
+        <div style={{ height: 3, background: app.color, width: "100%" }} />
+
+        <div className="p-3.5">
+          {/* Header row */}
+          <div className="flex items-center gap-2.5 mb-2.5">
+            {/* App logo badge */}
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[10px] font-black tracking-widest"
+              style={{
+                background: app.bg,
+                border: `1px solid ${app.color}50`,
+                color: app.color,
+              }}
+            >
+              {app.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                className="text-[11px] font-black truncate leading-tight"
+                style={{ color: app.color }}
+              >
+                {data.app || "Custom"}
+              </p>
+              <p className="text-[8px] font-bold uppercase tracking-widest text-[#555]">
+                {app.category}
+              </p>
+            </div>
+            {/* Live status dot */}
+            <div
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{
+                background: isConnected ? "#10b981" : "#2a2a2a",
+                boxShadow: isConnected
+                  ? "0 0 8px rgba(16,185,129,0.7)"
+                  : "none",
+              }}
+              title={isConnected ? "Connected" : "Not connected"}
+            />
+          </div>
+
+          {/* Action pill */}
+          <div
+            className="px-2.5 py-1.5 rounded-lg text-[9px] font-bold truncate text-white/70"
+            style={{
+              background: `${app.color}0d`,
+              border: `1px solid ${app.color}25`,
+            }}
+          >
+            {data.action || app.defaultAction}
+          </div>
+
+          {/* Optional note */}
+          {data.note && (
+            <p className="text-[8px] text-[#444] mt-1.5 leading-relaxed line-clamp-2">
+              {data.note}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// § 11c. GROUP / FRAME NODE — Node Cluster Container
+// ============================================================================
+
+/**
+ * @component GroupNode
+ * @description
+ * Transparent frame that groups and labels related nodes.
+ * Uses ReactFlow's parent node system: nodes dragged inside inherit position.
+ * Resizable via corner handles. Label is shown at top-left of the frame.
+ */
+const GroupNode = ({ id, data, selected }) => {
+  const color = data.color || "#ca8a04";
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        minWidth: 300,
+        minHeight: 200,
+        position: "relative",
+      }}
+    >
+      <NodeResizer
+        minWidth={300}
+        minHeight={200}
+        isVisible={selected}
+        lineStyle={{
+          border: `1.5px dashed ${color}`,
+          opacity: selected ? 0.7 : 0.3,
+        }}
+        handleStyle={{
+          backgroundColor: color,
+          width: 10,
+          height: 10,
+          borderRadius: "3px",
+          border: "2px solid #030303",
+        }}
+      />
+
+      {/* Frame backdrop */}
+      <div
+        className="absolute inset-0 rounded-[2rem] pointer-events-none"
+        style={{
+          background: `${color}04`,
+          border: `1.5px dashed ${color}${selected ? "50" : "20"}`,
+          transition: "all 0.2s",
+        }}
+      />
+
+      {/* Label header */}
+      <div className="absolute top-3.5 left-4 flex items-center gap-2 pointer-events-none">
+        <div
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: color, boxShadow: `0 0 6px ${color}` }}
+        />
+        <span
+          className="text-[9px] font-black uppercase tracking-[0.2em]"
+          style={{ color: `${color}90` }}
+        >
+          {data.label || "Group"}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // § 12. NODE & EDGE TYPE REGISTRIES
 // ============================================================================
 
@@ -1233,6 +1761,8 @@ const nodeTypes = {
   videoWidget: VideoWidgetNode,
   journalNode: JournalNode,
   milestoneNode: MilestoneNode,
+  connectorNode: AppConnectorNode,
+  groupNode: GroupNode,
 };
 const edgeTypes = { neuralEdge: NeuralEdge };
 
@@ -2110,6 +2640,30 @@ const FlowCanvas = ({
           isUnlocked: false,
           xpReward: 100,
         };
+      } else if (nodeClass === "connectorNode") {
+        /**
+         * @description
+         * `type` is repurposed here as the app name from APP_CONNECTOR_REGISTRY.
+         * e.g. addNode("LinkedIn", "connectorNode")
+         */
+        newNode.data = {
+          app: type || "LinkedIn",
+          action:
+            APP_CONNECTOR_REGISTRY[type]?.defaultAction ||
+            "Configure action...",
+          isConnected: false,
+          note: "",
+        };
+        newNode.style = { width: 220 };
+      } else if (nodeClass === "groupNode") {
+        newNode.data = {
+          label: type || "Group",
+          color: "#ca8a04",
+        };
+        newNode.type = "groupNode";
+        newNode.style = { width: 540, height: 400 };
+        // Groups sit behind other nodes
+        newNode.zIndex = -1;
       }
 
       setNodes((nds) => [...nds, newNode]);
@@ -2502,13 +3056,44 @@ const FlowCanvas = ({
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
         fitView
+        fitViewOptions={{ padding: 0.3, duration: 800 }}
         className="bg-[#030303]"
-        minZoom={0.04}
-        maxZoom={2.5}
+        minZoom={0.03}
+        maxZoom={3}
+        /**
+         * Snap-to-grid: 20px grid gives clean alignment when dragging nodes.
+         * Combined with the smoothstep connection line, this gives the
+         * professional agentic AI system aesthetic.
+         */
+        snapToGrid
+        snapGrid={[20, 20]}
+        /**
+         * Connection line type matches the NeuralEdge routing (smoothstep).
+         * Keeps the preview edge consistent with the final edge style.
+         */
+        connectionLineType="smoothstep"
+        connectionRadius={35}
+        elevateNodesOnSelect
+        selectNodesOnDrag={false}
         proOptions={{ hideAttribution: true }}
-        defaultEdgeOptions={{ type: "neuralEdge" }}
+        defaultEdgeOptions={{
+          type: "neuralEdge",
+          animated: false,
+        }}
+        /**
+         * Node types that should NOT intercept canvas drag events (for group nodes)
+         */
+        nodesDraggable
+        nodesConnectable
+        elementsSelectable
       >
-        <Background variant="dots" color="#1a1a1a" gap={48} size={1.5} />
+        <Background
+          variant="dots"
+          color="#1e1e1e"
+          gap={20}
+          size={1}
+          style={{ backgroundColor: "#030303" }}
+        />
         <Controls
           showInteractive={false}
           className="!bg-transparent !border-none shadow-2xl [&_.react-flow__controls-button]:bg-[#080808] [&_.react-flow__controls-button]:border-[#1e1e1e] [&_.react-flow__controls-button]:fill-[#666] rounded-xl border border-[#1e1e1e] overflow-hidden z-30 hidden md:flex"
@@ -2617,11 +3202,71 @@ const FlowCanvas = ({
               <button
                 key={item.label}
                 onClick={() => addNode(item.cls, item.cls)}
-                className="w-full px-5 py-3.5 text-left text-xs font-bold text-white hover:bg-[#0d0d0d] flex items-center gap-3 border-b border-[#1a1a1a] transition-colors last:border-b-0"
+                className="w-full px-5 py-3.5 text-left text-xs font-bold text-white hover:bg-[#0d0d0d] flex items-center gap-3 border-b border-[#1a1a1a] transition-colors"
               >
                 {item.icon} {item.label}
               </button>
             ))}
+
+            {/* ── APP CONNECTORS ── */}
+            <div className="px-5 py-2.5 bg-[#050505] border-y border-[#1a1a1a] text-[9px] font-black text-[#444] uppercase tracking-widest flex items-center gap-2">
+              <PlugZap className="w-3 h-3 text-amber-500" /> App Connectors
+            </div>
+            <div className="grid grid-cols-2 gap-0">
+              {[
+                { app: "LinkedIn" },
+                { app: "GitHub" },
+                { app: "YouTube" },
+                { app: "Unstop" },
+                { app: "LeetCode" },
+                { app: "HackerRank" },
+                { app: "Figma" },
+                { app: "Notion" },
+                { app: "Coursera" },
+                { app: "Gmail" },
+                { app: "Slack" },
+                { app: "ProductHunt" },
+                { app: "Medium" },
+                { app: "Behance" },
+                { app: "Discord" },
+                { app: "Calendly" },
+                { app: "Dribbble" },
+                { app: "Custom" },
+              ].map(({ app }) => {
+                const cfg =
+                  APP_CONNECTOR_REGISTRY[app] || APP_CONNECTOR_REGISTRY.Custom;
+                return (
+                  <button
+                    key={app}
+                    onClick={() => addNode(app, "connectorNode")}
+                    className="flex items-center gap-2 px-3 py-2.5 text-left text-[10px] font-bold hover:bg-[#0d0d0d] border-b border-r border-[#1a1a1a] transition-colors"
+                    style={{ color: cfg.color }}
+                  >
+                    <span
+                      className="w-5 h-5 rounded text-[7px] font-black flex items-center justify-center shrink-0"
+                      style={{
+                        background: cfg.bg,
+                        border: `1px solid ${cfg.color}40`,
+                      }}
+                    >
+                      {cfg.icon}
+                    </span>
+                    {app}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── STRUCTURE ── */}
+            <div className="px-5 py-2.5 bg-[#050505] border-y border-[#1a1a1a] text-[9px] font-black text-[#444] uppercase tracking-widest flex items-center gap-2">
+              <Boxes className="w-3 h-3 text-[#666]" /> Structure
+            </div>
+            <button
+              onClick={() => addNode("Group", "groupNode")}
+              className="w-full px-5 py-3.5 text-left text-xs font-bold text-white hover:bg-[#0d0d0d] flex items-center gap-3 transition-colors"
+            >
+              <FolderKanban className="w-4 h-4 text-[#888]" /> Group Frame
+            </button>
           </motion.div>
         )}
 
@@ -3670,7 +4315,14 @@ const Roadmap = () => {
             xpReward: n.xpReward || 100,
           };
         }
-        return { id: n.id, type: nodeClass, position: { x: 0, y: 0 }, data };
+        // `_freshlyGenerated` tells generateNeuralLayout to always reposition this node.
+        // It is stripped after the first layout pass (inside generateNeuralLayout itself).
+        return {
+          id: n.id,
+          type: nodeClass,
+          position: { x: 0, y: 0 },
+          data: { ...data, _freshlyGenerated: true },
+        };
       });
 
       const newEdges = aiData.edges.map((e, i) => ({

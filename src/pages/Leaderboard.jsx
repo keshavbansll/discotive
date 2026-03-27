@@ -198,7 +198,9 @@ const CHARACTERS = {
 };
 
 const getAvatar = (rankKey, gender) =>
-  CHARACTERS[rankKey][gender] || CHARACTERS[rankKey]["Other"];
+  CHARACTERS[rankKey]?.[gender] ||
+  CHARACTERS[rankKey]?.Other ||
+  "/Characters/Observer.gif";
 
 // Gamified styling based on user level
 const getLevelAura = (levelString) => {
