@@ -18,7 +18,7 @@
  *  – All string inputs are DOMPurify-sanitised before entering node data.
  */
 
-import {
+import React, {
   useState,
   useEffect,
   useCallback,
@@ -780,7 +780,7 @@ const NeuralEdge = ({
  *  – Verified asset-linkage badge on certification tasks
  *  – Pointer-events split: handles are interactive; body opens command center
  */
-const ExecutionNode = ({ data, selected, id, style: nodeStyle }) => {
+const ExecutionNode = React.memo(({ data, selected, id, style: nodeStyle }) => {
   const [collapsed, setCollapsed] = useState(data.collapsed || false);
 
   const isCompleted = data.isCompleted;
@@ -874,13 +874,6 @@ const ExecutionNode = ({ data, selected, id, style: nodeStyle }) => {
           boxShadow: `0 0 8px ${accent.glow}`,
         }}
         keepAspectRatio={false}
-        onResize={(e, params) => {
-          window.dispatchEvent(
-            new CustomEvent("NODE_RESIZED", {
-              detail: { id, width: params.width, height: params.height },
-            }),
-          );
-        }}
       />
       <Handle
         type="target"
@@ -1113,7 +1106,7 @@ const ExecutionNode = ({ data, selected, id, style: nodeStyle }) => {
       </div>
     </div>
   );
-};
+});
 
 // ============================================================================
 // § 7. RADAR WIDGET NODE
@@ -1123,7 +1116,7 @@ const ExecutionNode = ({ data, selected, id, style: nodeStyle }) => {
  * @component RadarWidgetNode
  * @description Competency radar chart widget node. Animated on first mount.
  */
-const RadarWidgetNode = ({ data, selected }) => (
+const RadarWidgetNode = React.memo(({ data, selected }) => (
   <div
     className="w-[300px] h-[300px] bg-[#0a0a0c]/95 backdrop-blur-2xl rounded-[2rem] p-6 flex flex-col relative border transition-all duration-300"
     style={{
@@ -1188,14 +1181,14 @@ const RadarWidgetNode = ({ data, selected }) => (
       </ResponsiveContainer>
     </div>
   </div>
-);
+));
 
 // ============================================================================
 // § 8. ASSET WIDGET NODE
 // ============================================================================
 
 /** @component AssetWidgetNode — Vault asset linkage proxy node. */
-const AssetWidgetNode = ({ id, data, selected }) => {
+const AssetWidgetNode = React.memo(({ id, data, selected }) => {
   const handleAccess = (e) => {
     e.stopPropagation();
     if (data.url) {
@@ -1311,14 +1304,14 @@ const AssetWidgetNode = ({ id, data, selected }) => {
       </div>
     </div>
   );
-};
+});
 
 // ============================================================================
 // § 9. VIDEO WIDGET NODE
 // ============================================================================
 
 /** @component VideoWidgetNode — YouTube/external media proxy node. */
-const VideoWidgetNode = ({ id, data, selected }) => {
+const VideoWidgetNode = React.memo(({ id, data, selected }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const isWatched = data.isWatched || false;
 
@@ -1432,7 +1425,7 @@ const VideoWidgetNode = ({ id, data, selected }) => {
       </div>
     </div>
   );
-};
+});
 
 // ============================================================================
 // § 10. JOURNAL NODE — new: Inline execution journal entry
@@ -1600,142 +1593,145 @@ const MilestoneNode = ({ data, selected }) => {
  * Color-coded per app, shows action label, live status dot, and resize handles.
  * Bidirectional handles on all 4 sides for maximum routing flexibility.
  */
-const AppConnectorNode = ({ id, data, selected, style: nodeStyle }) => {
-  const app = APP_CONNECTOR_REGISTRY[data.app] || APP_CONNECTOR_REGISTRY.Custom;
+const AppConnectorNode = React.memo(
+  ({ id, data, selected, style: nodeStyle }) => {
+    const app =
+      APP_CONNECTOR_REGISTRY[data.app] || APP_CONNECTOR_REGISTRY.Custom;
 
-  const isConnected = data.isConnected ?? false;
+    const isConnected = data.isConnected ?? false;
 
-  const handleStyle = {
-    background: "#111",
-    border: `2px solid ${app.color}`,
-    width: 12,
-    height: 12,
-    borderRadius: "50%",
-  };
+    const handleStyle = {
+      background: "#111",
+      border: `2px solid ${app.color}`,
+      width: 12,
+      height: 12,
+      borderRadius: "50%",
+    };
 
-  return (
-    <div
-      style={{
-        width: nodeStyle?.width ?? 220,
-        minWidth: 180,
-        filter: selected ? `drop-shadow(0 0 14px ${app.glow})` : "none",
-        transition: "filter 0.25s",
-      }}
-    >
-      <NodeResizer
-        minWidth={180}
-        minHeight={110}
-        isVisible={selected}
-        lineStyle={{ border: `1.5px dashed ${app.color}`, opacity: 0.6 }}
-        handleStyle={{
-          backgroundColor: app.color,
-          width: 9,
-          height: 9,
-          borderRadius: "50%",
-          border: "2px solid #030303",
-        }}
-      />
-
-      {/* Handles — all 4 sides */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={handleStyle}
-        id="left"
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={handleStyle}
-        id="right"
-      />
-      <Handle
-        type="target"
-        position={Position.Top}
-        style={handleStyle}
-        id="top"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        style={handleStyle}
-        id="bottom"
-      />
-
-      {/* Card */}
+    return (
       <div
-        className="rounded-[20px] overflow-hidden transition-all duration-200"
         style={{
-          background: `linear-gradient(135deg, ${app.bg}, rgba(5,5,8,0.97))`,
-          border: `1px solid ${selected ? app.color : app.color + "40"}`,
-          boxShadow: selected
-            ? `0 0 0 1px ${app.color}60, 0 20px 40px rgba(0,0,0,0.6)`
-            : "0 8px 24px rgba(0,0,0,0.5)",
+          width: nodeStyle?.width ?? 220,
+          minWidth: 180,
+          filter: selected ? `drop-shadow(0 0 14px ${app.glow})` : "none",
+          transition: "filter 0.25s",
         }}
       >
-        {/* Accent stripe */}
-        <div style={{ height: 3, background: app.color, width: "100%" }} />
+        <NodeResizer
+          minWidth={180}
+          minHeight={110}
+          isVisible={selected}
+          lineStyle={{ border: `1.5px dashed ${app.color}`, opacity: 0.6 }}
+          handleStyle={{
+            backgroundColor: app.color,
+            width: 9,
+            height: 9,
+            borderRadius: "50%",
+            border: "2px solid #030303",
+          }}
+        />
 
-        <div className="p-3.5">
-          {/* Header row */}
-          <div className="flex items-center gap-2.5 mb-2.5">
-            {/* App logo badge */}
+        {/* Handles — all 4 sides */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={handleStyle}
+          id="left"
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={handleStyle}
+          id="right"
+        />
+        <Handle
+          type="target"
+          position={Position.Top}
+          style={handleStyle}
+          id="top"
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          style={handleStyle}
+          id="bottom"
+        />
+
+        {/* Card */}
+        <div
+          className="rounded-[20px] overflow-hidden transition-all duration-200"
+          style={{
+            background: `linear-gradient(135deg, ${app.bg}, rgba(5,5,8,0.97))`,
+            border: `1px solid ${selected ? app.color : app.color + "40"}`,
+            boxShadow: selected
+              ? `0 0 0 1px ${app.color}60, 0 20px 40px rgba(0,0,0,0.6)`
+              : "0 8px 24px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* Accent stripe */}
+          <div style={{ height: 3, background: app.color, width: "100%" }} />
+
+          <div className="p-3.5">
+            {/* Header row */}
+            <div className="flex items-center gap-2.5 mb-2.5">
+              {/* App logo badge */}
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[10px] font-black tracking-widest"
+                style={{
+                  background: app.bg,
+                  border: `1px solid ${app.color}50`,
+                  color: app.color,
+                }}
+              >
+                {app.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p
+                  className="text-[11px] font-black truncate leading-tight"
+                  style={{ color: app.color }}
+                >
+                  {data.app || "Custom"}
+                </p>
+                <p className="text-[8px] font-bold uppercase tracking-widest text-[#555]">
+                  {app.category}
+                </p>
+              </div>
+              {/* Live status dot */}
+              <div
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{
+                  background: isConnected ? "#10b981" : "#2a2a2a",
+                  boxShadow: isConnected
+                    ? "0 0 8px rgba(16,185,129,0.7)"
+                    : "none",
+                }}
+                title={isConnected ? "Connected" : "Not connected"}
+              />
+            </div>
+
+            {/* Action pill */}
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[10px] font-black tracking-widest"
+              className="px-2.5 py-1.5 rounded-lg text-[9px] font-bold truncate text-white/70"
               style={{
-                background: app.bg,
-                border: `1px solid ${app.color}50`,
-                color: app.color,
+                background: `${app.color}0d`,
+                border: `1px solid ${app.color}25`,
               }}
             >
-              {app.icon}
+              {data.action || app.defaultAction}
             </div>
-            <div className="flex-1 min-w-0">
-              <p
-                className="text-[11px] font-black truncate leading-tight"
-                style={{ color: app.color }}
-              >
-                {data.app || "Custom"}
-              </p>
-              <p className="text-[8px] font-bold uppercase tracking-widest text-[#555]">
-                {app.category}
-              </p>
-            </div>
-            {/* Live status dot */}
-            <div
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{
-                background: isConnected ? "#10b981" : "#2a2a2a",
-                boxShadow: isConnected
-                  ? "0 0 8px rgba(16,185,129,0.7)"
-                  : "none",
-              }}
-              title={isConnected ? "Connected" : "Not connected"}
-            />
-          </div>
 
-          {/* Action pill */}
-          <div
-            className="px-2.5 py-1.5 rounded-lg text-[9px] font-bold truncate text-white/70"
-            style={{
-              background: `${app.color}0d`,
-              border: `1px solid ${app.color}25`,
-            }}
-          >
-            {data.action || app.defaultAction}
+            {/* Optional note */}
+            {data.note && (
+              <p className="text-[8px] text-[#444] mt-1.5 leading-relaxed line-clamp-2">
+                {data.note}
+              </p>
+            )}
           </div>
-
-          {/* Optional note */}
-          {data.note && (
-            <p className="text-[8px] text-[#444] mt-1.5 leading-relaxed line-clamp-2">
-              {data.note}
-            </p>
-          )}
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  },
+);
 
 // ============================================================================
 // § 11c. GROUP / FRAME NODE — Node Cluster Container
@@ -2257,29 +2253,7 @@ const FlowCanvas = ({
     [],
   );
 
-  useEffect(() => {
-    const handler = (e) => {
-      const { id, width, height } = e.detail;
-
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === id
-            ? {
-                ...n,
-                style: {
-                  ...n.style,
-                  width,
-                  height,
-                },
-              }
-            : n,
-        ),
-      );
-    };
-
-    window.addEventListener("NODE_RESIZED", handler);
-    return () => window.removeEventListener("NODE_RESIZED", handler);
-  }, []);
+  // NodeResizer updates flow directly via onNodesChange/applyNodeChanges — no custom event needed
 
   useEffect(() => {
     const outside = (e) => {
@@ -3106,7 +3080,6 @@ const FlowCanvas = ({
         nodesDraggable
         nodesConnectable
         elementsSelectable
-        fitView
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -3114,6 +3087,8 @@ const FlowCanvas = ({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        elevateEdgesOnSelect={false}
+        onlyRenderVisibleElements
         onPaneContextMenu={(e) => {
           e.preventDefault();
           setNodeMenu(null);
@@ -3243,12 +3218,14 @@ const FlowCanvas = ({
                 type: "core",
                 cls: "executionNode",
                 icon: <Target className="w-4 h-4 text-amber-500" />,
+                live: true,
               },
               {
                 label: "Sub-Routine",
                 type: "branch",
                 cls: "executionNode",
                 icon: <GitBranch className="w-4 h-4 text-[#888]" />,
+                live: true,
               },
             ].map((item) => (
               <button
@@ -3264,37 +3241,56 @@ const FlowCanvas = ({
             </div>
             {[
               {
-                label: "Radar Matrix",
-                cls: "radarWidget",
-                icon: <Activity className="w-4 h-4 text-amber-500" />,
-              },
-              {
                 label: "Vault Asset",
                 cls: "assetWidget",
                 icon: <Database className="w-4 h-4 text-emerald-500" />,
+                live: true,
               },
               {
                 label: "Video Source",
                 cls: "videoWidget",
                 icon: <Video className="w-4 h-4 text-sky-400" />,
+                live: true,
               },
               {
                 label: "Execution Log",
                 cls: "journalNode",
                 icon: <BookOpen className="w-4 h-4 text-violet-500" />,
+                live: true,
               },
               {
                 label: "Milestone Gate",
                 cls: "milestoneNode",
                 icon: <Trophy className="w-4 h-4 text-amber-400" />,
+                live: true,
+              },
+              {
+                label: "Radar Matrix",
+                cls: "radarWidget",
+                icon: <Activity className="w-4 h-4 text-amber-500" />,
+                live: false,
+                soon: true,
               },
             ].map((item) => (
               <button
                 key={item.label}
-                onClick={() => addNode(item.cls, item.cls)}
-                className="w-full px-5 py-3.5 text-left text-xs font-bold text-white hover:bg-[#0d0d0d] flex items-center gap-3 border-b border-[#1a1a1a] transition-colors"
+                onClick={() => item.live && addNode(item.cls, item.cls)}
+                disabled={item.soon}
+                className={cn(
+                  "w-full px-5 py-3.5 text-left text-xs font-bold hover:bg-[#0d0d0d] flex items-center justify-between gap-3 border-b border-[#1a1a1a] transition-colors",
+                  item.soon
+                    ? "opacity-40 cursor-not-allowed text-[#666]"
+                    : "text-white",
+                )}
               >
-                {item.icon} {item.label}
+                <span className="flex items-center gap-3">
+                  {item.icon} {item.label}
+                </span>
+                {item.soon && (
+                  <span className="text-[7px] font-black uppercase tracking-widest text-[#555] bg-[#111] px-1.5 py-0.5 rounded border border-[#222]">
+                    Soon
+                  </span>
+                )}
               </button>
             ))}
 
@@ -3322,26 +3318,35 @@ const FlowCanvas = ({
                 { app: "Calendly" },
                 { app: "Dribbble" },
                 { app: "Custom" },
-              ].map(({ app }) => {
+              ].map(({ app, soon }) => {
                 const cfg =
                   APP_CONNECTOR_REGISTRY[app] || APP_CONNECTOR_REGISTRY.Custom;
                 return (
                   <button
                     key={app}
-                    onClick={() => addNode(app, "connectorNode")}
-                    className="flex items-center gap-2 px-3 py-2.5 text-left text-[10px] font-bold hover:bg-[#0d0d0d] border-b border-r border-[#1a1a1a] transition-colors"
-                    style={{ color: cfg.color }}
+                    onClick={() => !soon && addNode(app, "connectorNode")}
+                    disabled={soon}
+                    className={cn(
+                      "flex items-center justify-between gap-2 px-3 py-2.5 text-left text-[10px] font-bold hover:bg-[#0d0d0d] border-b border-r border-[#1a1a1a] transition-colors",
+                      soon && "opacity-35 cursor-not-allowed",
+                    )}
+                    style={{ color: soon ? "#444" : cfg.color }}
                   >
-                    <span
-                      className="w-5 h-5 rounded text-[7px] font-black flex items-center justify-center shrink-0"
-                      style={{
-                        background: cfg.bg,
-                        border: `1px solid ${cfg.color}40`,
-                      }}
-                    >
-                      {cfg.icon}
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="w-5 h-5 rounded text-[7px] font-black flex items-center justify-center shrink-0"
+                        style={{
+                          background: cfg.bg,
+                          border: `1px solid ${cfg.color}40`,
+                        }}
+                      >
+                        {cfg.icon}
+                      </span>
+                      {app}
                     </span>
-                    {app}
+                    {soon && (
+                      <span className="text-[6px] text-[#444]">soon</span>
+                    )}
                   </button>
                 );
               })}
@@ -4260,6 +4265,80 @@ const JournalModal = ({ userId, onClose, addToast }) => {
 };
 
 // ============================================================================
+// § MOBILE FLOATING ACTION BAR — shown in edit mode on touch devices
+// ============================================================================
+const MobileActionBar = ({
+  onAddCore,
+  onAddBranch,
+  onAutoLayout,
+  onSave,
+  hasUnsaved,
+  isSaving,
+  onUndo,
+}) => (
+  <motion.div
+    initial={{ y: 100, opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    exit={{ y: 100, opacity: 0 }}
+    className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 bg-[#080808]/98 backdrop-blur-2xl border border-[#1e1e1e] rounded-2xl p-2 shadow-[0_20px_60px_rgba(0,0,0,0.9)]"
+  >
+    {[
+      {
+        icon: <Target className="w-4 h-4" />,
+        label: "Core",
+        action: onAddCore,
+        color: "text-amber-500",
+        bg: "bg-amber-500/10 border-amber-500/20",
+      },
+      {
+        icon: <GitBranch className="w-4 h-4" />,
+        label: "Sub",
+        action: onAddBranch,
+        color: "text-[#888]",
+        bg: "bg-[#111] border-[#1e1e1e]",
+      },
+      {
+        icon: <NetworkIcon className="w-4 h-4" />,
+        label: "Align",
+        action: onAutoLayout,
+        color: "text-sky-400",
+        bg: "bg-sky-500/10 border-sky-500/20",
+      },
+    ].map(({ icon, label, action, color, bg }) => (
+      <button
+        key={label}
+        onClick={action}
+        className={cn(
+          "flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition-all active:scale-95",
+          bg,
+          color,
+        )}
+      >
+        {icon}
+        <span className="text-[8px] font-black uppercase tracking-widest">
+          {label}
+        </span>
+      </button>
+    ))}
+    <div className="w-px h-8 bg-[#1e1e1e] mx-1" />
+    <button
+      onClick={onSave}
+      disabled={!hasUnsaved || isSaving}
+      className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white disabled:opacity-30 active:scale-95 transition-all"
+    >
+      {isSaving ? (
+        <RefreshCw className="w-4 h-4 animate-spin" />
+      ) : (
+        <Cloud className="w-4 h-4" />
+      )}
+      <span className="text-[8px] font-black uppercase tracking-widest">
+        {isSaving ? "..." : "Save"}
+      </span>
+    </button>
+  </motion.div>
+);
+
+// ============================================================================
 // § 17. MASTER ROADMAP ENGINE — ROOT COMPONENT
 // ============================================================================
 
@@ -4378,12 +4457,14 @@ const Roadmap = () => {
 
   // ── Custom event bus for vault/video modals dispatched from widget nodes ──
   useEffect(() => {
-    const handleVaultOpen = (e) =>
+    const handleVaultOpen = (e) => {
       setVaultModal({
         isOpen: true,
         targetNodeId: e.detail.nodeId,
         filter: "All",
+        openNewUpload: e.detail.mode === "new",
       });
+    };
     const handleVideoOpen = (e) =>
       setVideoModal({
         isOpen: true,
@@ -4998,7 +5079,10 @@ const Roadmap = () => {
 
   // ──────────────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-[#030303] h-[100dvh] w-full max-w-full overflow-hidden text-white relative flex flex-col">
+    <div
+      className="bg-[#030303] w-full max-w-full text-white relative flex flex-col"
+      style={{ height: "100dvh", overflow: "hidden" }}
+    >
       {/* ── FULLSCREEN ESCAPE HATCH ──
           Rendered as a portal directly on document.body so it floats above
           the ReactFlow fixed container (z-[9999]) at z-[99999].
@@ -5057,7 +5141,7 @@ const Roadmap = () => {
       </div>
 
       {/* ── FLOW CANVAS ZONE ── */}
-      <div className="relative flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         {/* First-time splash overlay — fires ONLY on account creation, never on empty canvas */}
         {showInitProtocol && (
           <div className="absolute inset-0 z-[80] bg-black/70 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center">
@@ -5539,6 +5623,80 @@ const Roadmap = () => {
         )}
       </AnimatePresence>
 
+      {/* ── MOBILE FLOATING ACTION BAR ── */}
+      <AnimatePresence>
+        {isMobileEditMode && (
+          <MobileActionBar
+            onAddCore={() => {
+              const uid_mobile = `node_${Date.now()}`;
+              setNodes((nds) => [
+                ...nds,
+                {
+                  id: uid_mobile,
+                  type: "executionNode",
+                  position: {
+                    x: 80 + Math.random() * 200,
+                    y: 80 + Math.random() * 200,
+                  },
+                  data: {
+                    title: "New Protocol",
+                    subtitle: "Awaiting Parameters",
+                    desc: "",
+                    deadline: "",
+                    tasks: [],
+                    isCompleted: false,
+                    priorityStatus: "FUTURE",
+                    nodeType: "core",
+                    accentColor: "amber",
+                    tags: [],
+                    collapsed: false,
+                  },
+                },
+              ]);
+              setHasUnsavedChanges(true);
+              addToast("Core node added.", "grey");
+            }}
+            onAddBranch={() => {
+              const uid_mobile = `node_${Date.now()}`;
+              setNodes((nds) => [
+                ...nds,
+                {
+                  id: uid_mobile,
+                  type: "executionNode",
+                  position: {
+                    x: 80 + Math.random() * 200,
+                    y: 200 + Math.random() * 200,
+                  },
+                  data: {
+                    title: "Sub-Routine",
+                    subtitle: "Awaiting Parameters",
+                    desc: "",
+                    deadline: "",
+                    tasks: [],
+                    isCompleted: false,
+                    priorityStatus: "FUTURE",
+                    nodeType: "branch",
+                    accentColor: "white",
+                    tags: [],
+                    collapsed: false,
+                  },
+                },
+              ]);
+              setHasUnsavedChanges(true);
+              addToast("Sub-routine added.", "grey");
+            }}
+            onAutoLayout={() => {
+              setNodes((nds) => generateNeuralLayout(nds, edges));
+              setHasUnsavedChanges(true);
+              addToast("Layout aligned.", "grey");
+            }}
+            onSave={handleCloudSave}
+            hasUnsaved={hasUnsavedChanges}
+            isSaving={isSaving}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── TOAST SYSTEM ── */}
       {createPortal(
         <div className="fixed bottom-5 left-4 right-4 md:left-6 md:right-auto z-[9999] flex flex-col gap-2 pointer-events-none">
@@ -5612,6 +5770,20 @@ const Roadmap = () => {
                   <X className="w-4 h-4" />
                 </button>
               </div>
+              <div className="mb-4 p-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl flex items-center gap-3">
+                <div className="w-8 h-8 bg-emerald-500/15 border border-emerald-500/25 rounded-lg flex items-center justify-center shrink-0">
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                    Upload New Asset
+                  </p>
+                  <p className="text-[9px] text-[#555]">
+                    Choose from vault or add a new file below
+                  </p>
+                </div>
+              </div>
+
               <div className="flex gap-2 mb-6 flex-wrap">
                 {["All", "Document", "Image", "Code"].map((f) => (
                   <button

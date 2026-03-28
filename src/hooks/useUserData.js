@@ -36,5 +36,10 @@ export const useUserData = () => {
     fetchUserData();
   }, [currentUser]);
 
-  return { userData, loading };
+  // NEW: Manual state patcher for optimistic UI updates
+  const patchLocalData = (newFields) => {
+    setUserData((prev) => ({ ...prev, ...newFields }));
+  };
+
+  return { userData, loading, patchLocalData };
 };

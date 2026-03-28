@@ -35,17 +35,18 @@ export const mutateScore = async (userId, amount, reason, silent = false) => {
     };
 
     // Append to score_history so the sparkline reflects real-time mutations.
-    // We read the current score first to get an accurate history value.
     if (!silent) {
       const snap = await getDoc(userRef);
       if (snap.exists()) {
         const currentScore =
           (snap.data()?.discotiveScore?.current || 0) + amount;
         updatePayload.score_history = arrayUnion({
-          date: todayStr,
+          // REPLACE `todayStr` with `nowIso` for absolute time precision
+          date: nowIso,
           score: Math.max(0, currentScore),
         });
-        // Also keep consistency_log active for this date
+
+        // Keep consistency_log active using the daily string
         updatePayload.consistency_log = arrayUnion(todayStr);
       }
     }

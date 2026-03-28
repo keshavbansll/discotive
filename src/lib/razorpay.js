@@ -13,7 +13,7 @@ export const loadRazorpay = () => {
   });
 };
 
-export const initiateProUpgrade = async (userData) => {
+export const initiateProUpgrade = async (userData, subscriptionId) => {
   const isLoaded = await loadRazorpay();
   if (!isLoaded) {
     alert("System fault: Payment gateway failed to load.");
@@ -24,28 +24,23 @@ export const initiateProUpgrade = async (userData) => {
   // but for a pure client-side initiation using Razorpay Payment Links/Pages:
 
   const options = {
-    key: "YOUR_RAZORPAY_KEY_ID",
-    // If using subscriptions, pass the generated subscription_id here.
-    // If using a standard payment, pass amount and currency.
+    key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Use your public key here
+    subscription_id: subscriptionId, // <-- The ID from your backend
     name: "Discotive OS",
     description: "Upgrade to Discotive Pro",
-    image: "/logo.png", // Path to your OS logo
-    theme: {
-      color: "#f59e0b", // Matches your Amber OS theme
-    },
+    image: "/logo.png",
+    theme: { color: "#f59e0b" },
     prefill: {
-      name: userData.identity?.username || "",
+      name: userData.username || "",
       email: userData.email || "",
     },
-    notes: {
-      // CRITICAL: This is how the webhook identifies the user
-      firebase_uid: userData.uid,
-    },
+    // We don't need notes here, because we securely attached them on the backend
     handler: function (response) {
-      // The payment succeeded on the client.
-      // Do NOT manually update the database here.
-      // Wait for the Webhook to fire and the Firestore listener to update the UI automatically.
-      console.log("Transaction ID:", response.razorpay_payment_id);
+      console.log(
+        "Gateway Success. Awaiting Webhook sync...",
+        response.razorpay_payment_id,
+      );
+      // Optional: You can show a success toast here telling the user "Activating God Mode..."
     },
   };
 

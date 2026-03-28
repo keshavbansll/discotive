@@ -9,6 +9,8 @@
  * 3. FOMO UI Architecture (Strikethrough denial states for free tiers).
  */
 import { initiateProUpgrade } from "../lib/razorpay";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { auth } from "../firebase";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -73,8 +75,16 @@ const Premium = () => {
 
     setIsCheckingOut(true);
     try {
-      // This triggers the Razorpay modal overlay
-      await initiateProUpgrade(userData);
+      // 1. Initialize Firebase Functions
+      const functions = getFunctions();
+      const createSub = httpsCallable(functions, "createProSubscription");
+
+      // 2. Call the backend to generate the secure Subscription ID
+      const result = await createSub();
+      const subscriptionId = result.data.subscriptionId;
+
+      // 3. Trigger the Razorpay overlay with the verified ID
+      await initiateProUpgrade(userData, subscriptionId);
     } catch (error) {
       console.error("Checkout failed to initialize:", error);
       alert("Failed to connect to the payment gateway. Please try again.");

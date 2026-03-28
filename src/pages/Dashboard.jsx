@@ -89,6 +89,8 @@ const getAvatar = (rankKey, gender) =>
 // ============================================================================
 
 const Dashboard = () => {
+  const [chartTimeframe, setChartTimeframe] = useState(["24H", "1W", "1M"]);
+
   const { userData, loading: userLoading } = useUserData();
   const navigate = useNavigate();
 
@@ -351,30 +353,58 @@ const Dashboard = () => {
 
   const sparklineData = useMemo(() => {
     const history = userData?.score_history || [];
-    if (history.length >= 2) {
-      return history.slice(-14).map((entry) => ({
-        day: entry.date
-          ? new Date(entry.date).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-            })
-          : "—",
-        score: typeof entry.score === "number" ? entry.score : 0,
-      }));
+
+    const now = new Date();
+    let cutoffDate = new Date();
+
+    if (chartTimeframe === "24H") {
+      cutoffDate.setDate(now.getDate() - 1);
+    } else if (chartTimeframe === "1W") {
+      cutoffDate.setDate(now.getDate() - 7);
+    } else if (chartTimeframe === "1M") {
+      cutoffDate.setMonth(now.getMonth() - 1);
     }
-    // Synthesize a minimal visible baseline
+
+    const filteredHistory = history.filter((entry) => {
+      if (!entry.date) return false;
+      const entryDate = new Date(entry.date);
+      return entryDate >= cutoffDate;
+    });
+
+    if (filteredHistory.length >= 2) {
+      return filteredHistory.map((entry) => {
+        const d = new Date(entry.date);
+        return {
+          // If 24H, show time (HH:MM). Otherwise show Month/Day.
+          day:
+            chartTimeframe === "24H"
+              ? d.toLocaleTimeString(undefined, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : d.toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                }),
+          score: typeof entry.score === "number" ? entry.score : 0,
+        };
+      });
+    }
+
     if (currentScore > 0) {
-      const today = new Date();
       return [
         {
-          day: new Date(today.getTime() - 86400000).toLocaleDateString(
+          day: new Date(now.getTime() - 86400000).toLocaleDateString(
             undefined,
-            { month: "short", day: "numeric" },
+            {
+              month: "short",
+              day: "numeric",
+            },
           ),
           score: Math.max(0, currentScore - 10),
         },
         {
-          day: today.toLocaleDateString(undefined, {
+          day: now.toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
           }),
@@ -383,7 +413,7 @@ const Dashboard = () => {
       ];
     }
     return [];
-  }, [userData, currentScore]);
+  }, [userData, currentScore, chartTimeframe]);
 
   /**
    * @description
@@ -570,6 +600,23 @@ const Dashboard = () => {
                   <span className="text-6xl md:text-8xl font-black text-white font-mono tracking-tighter leading-none">
                     {currentScore}
                   </span>
+                </div>
+
+                <div className="flex items-center bg-white/[0.02] border border-white/[0.05] rounded-lg p-1 backdrop-blur-md">
+                  {["24H", "1W", "1M"].map((tf) => (
+                    <button
+                      key={tf}
+                      onClick={() => setChartTimeframe(tf)}
+                      className={cn(
+                        "px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all duration-300",
+                        chartTimeframe === tf
+                          ? "bg-amber-500/10 text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                          : "text-white/30 hover:text-white/70",
+                      )}
+                    >
+                      {tf}
+                    </button>
+                  ))}
                 </div>
 
                 {/* Real-time Reason Log */}
