@@ -21,7 +21,7 @@ export const useUserData = () => {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setUserData(docSnap.data());
+          setUserData({ uid: docSnap.id, ...docSnap.data() });
         } else {
           console.log("No user data found in database!");
         }

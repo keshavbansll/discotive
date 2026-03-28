@@ -485,6 +485,10 @@ const Vault = () => {
       setUploadError("Select an asset category before attaching a file.");
       return;
     }
+    if (!urlTitle.trim()) {
+      setUploadError("Asset Title is required.");
+      return;
+    }
     const newQueue = [];
     const errors = [];
 
@@ -512,6 +516,7 @@ const Vault = () => {
         hash: generateVisualHash(file.name),
         category: selectedCategory,
         credentialData,
+        customTitle: urlTitle,
       });
     });
 
@@ -563,7 +568,9 @@ const Vault = () => {
         },
         (error) => {
           console.error("Firebase Storage Upload Fault:", error);
-          setUploadQueue((prev) => prev.filter((q) => q.id !== item.id)); // Remove failed from queue
+          // NEW: Surface the error to the user interface
+          setUploadError(`Upload blocked: ${error.message} (Check Console)`);
+          setUploadQueue((prev) => prev.filter((q) => q.id !== item.id));
         },
         async () => {
           // 3. Upload Complete → Get Download URL
@@ -572,7 +579,7 @@ const Vault = () => {
           // 4. Construct enriched Asset Payload
           const newAsset = {
             id: item.id,
-            title: item.file.name,
+            title: item.customTitle || item.file.name,
             type: item.file.type || "application/octet-stream",
             size: item.file.size,
             hash: item.hash,
@@ -725,7 +732,7 @@ const Vault = () => {
       onDrop={handleDrop}
     >
       {/* GLOBAL BACKGROUND NOISE */}
-      <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none z-0" />
+      <div className="fixed inset-0 bg-[('/noise.svg')] opacity-[0.03] pointer-events-none z-0" />
 
       {/* --- GLOBAL PROCESSING LOCK --- */}
       <AnimatePresence>
@@ -1595,9 +1602,10 @@ const Vault = () => {
                             type="file"
                             multiple
                             className="hidden"
-                            onChange={(e) =>
-                              validateAndQueueFiles(e.target.files)
-                            }
+                            onChange={(e) => {
+                              validateAndQueueFiles(e.target.files);
+                              e.target.value = null;
+                            }}
                           />
                           <UploadCloud className="w-8 h-8 text-[#555] group-hover:text-amber-500 transition-colors mx-auto mb-3" />
                           <p className="text-sm font-bold text-white mb-1">

@@ -18,16 +18,20 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID, // <-- Make sure you have this!
 };
 
+if (import.meta.env.DEV) {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
 //Initialize App Check
-const appCheck = initializeAppCheck(app, {
-  provider: new ReCaptchaEnterpriseProvider(
-    import.meta.env.VITE_RECAPTCHA_SITE_KEY,
-  ),
-  isTokenAutoRefreshEnabled: true,
-});
+if (import.meta.env.PROD) {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider("YOUR_RECAPTCHA_KEY"),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
 
 // Initialize Services
 export const auth = getAuth(app);
