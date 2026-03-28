@@ -371,6 +371,16 @@ const SPECIALIZATIONS = [
   "Surgery",
 ].sort();
 
+const COUNTRY_CODES = [
+  "🇮🇳 +91",
+  "🇺🇸 +1",
+  "🇬🇧 +44",
+  "🇨🇦 +1",
+  "🇦🇺 +61",
+  "🇸🇬 +65",
+  "🇦🇪 +971",
+].sort();
+
 const MACRO_DOMAINS = [
   "Engineering",
   "Design",
@@ -853,7 +863,8 @@ const initialProfileState = {
   gender: "",
   userState: "",
   country: "",
-  contact: "",
+  countryCode: "🇮🇳 +91",
+  mobileNumber: "",
   requestMessage: "",
   currentStatus: "",
   institution: "",
@@ -972,7 +983,7 @@ const Auth = () => {
       {
         image: "/stock/Wolf of Wall Street 1.jpg",
         quote:
-          "The only thing standing between you and your goal is the bulls**t story...",
+          "Act as if! Act as if you're a wealthy man, rich already, and then you'll surely become rich.",
         author: "Jordan Belfort",
       },
       {
@@ -981,9 +992,15 @@ const Auth = () => {
         author: "Sonny Hayes",
       },
       {
-        image: "/stock/The Social Network.jpg",
-        quote: "They came to me with an idea, I had a better one.",
-        author: "Mark Zuckerberg",
+        image: "/stock/Game of Thrones.png",
+        quote: "Chaos isn't a pit. Chaos is a ladder.",
+        author: "Petyr Baelish",
+      },
+      {
+        image: "/stock/Succession.jpg",
+        quote:
+          "The game is to act like you're relaxed while your hand is closing around something unseen",
+        author: "Logan Roy",
       },
     ],
     [],
@@ -1698,6 +1715,15 @@ const Auth = () => {
   const handleAccessRequest = async (e) => {
     e.preventDefault();
 
+    // Strict 10-digit validation barrier
+    if (profileData.mobileNumber.length !== 10) {
+      addToast(
+        "Transmission failed: Invalid mobile coordinate. Must be 10 digits.",
+        "red",
+      );
+      return;
+    }
+
     // Grab the data directly from your state machine. No DOM scraping required.
     const userName =
       `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim() ||
@@ -2273,8 +2299,8 @@ const Auth = () => {
                   </div>
                 </div>
                 <p className="text-sm text-[#ccc] leading-relaxed mb-6">
-                  Discotive is currently invite-only for the top 1% of builders.
-                  Your coordinate{" "}
+                  Discotive is currently under invite-only testing phase. Your
+                  coordinate{" "}
                   <strong className="text-white">({profileData.email})</strong>{" "}
                   is not verified on the chain.
                 </p>
@@ -2284,14 +2310,40 @@ const Auth = () => {
                 >
                   <div>
                     <label className={labelClass}>Contact Number</label>
-                    <input
-                      type="text"
-                      required
-                      value={profileData.contact}
-                      onChange={(e) => setField("contact", e.target.value)}
-                      className={inputClass}
-                      placeholder="+91 98765 43210"
-                    />
+                    <div className="flex gap-3">
+                      {/* Searchable Country Code Dropdown */}
+                      <div className="w-[140px] shrink-0">
+                        <CustomSearchSelect
+                          options={COUNTRY_CODES}
+                          value={profileData.countryCode}
+                          onChange={(v) => setField("countryCode", v)}
+                          placeholder="+91"
+                          allowCustom={false}
+                          required={true}
+                        />
+                      </div>
+
+                      {/* Strict Mobile Input */}
+                      <div className="flex-1">
+                        <input
+                          type="tel"
+                          required
+                          value={profileData.mobileNumber}
+                          onChange={(e) => {
+                            // Strip all non-digits, slice to 10 max
+                            let val = e.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 10);
+                            // Drop leading zero instantly
+                            if (val.startsWith("0")) val = val.slice(1);
+
+                            setField("mobileNumber", val);
+                          }}
+                          className={inputClass}
+                          placeholder="98765 43210"
+                        />
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <label className={labelClass}>
