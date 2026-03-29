@@ -1044,7 +1044,7 @@ const Features = () => {
                       to="/session"
                       className="text-sm font-medium text-[#888] hover:text-white transition-colors"
                     >
-                      Discotive Edge
+                      Connective
                     </Link>
                   </li>
                   <li>

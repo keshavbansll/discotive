@@ -410,12 +410,13 @@ const Navbar = ({ setIsHoveringCard, isInstallable, handleInstallClick }) => {
           )}
           <Link
             to="/auth"
+            state={{ isLogin: true }}
             className="hidden md:flex text-[11px] font-extrabold text-white hover:text-[#ccc] transition-colors uppercase tracking-[0.2em]"
           >
             Sign In
           </Link>
           <AnimatedButton
-            onClick={() => navigate("/auth")}
+            onClick={() => navigate("/auth", { state: { isLogin: false } })}
             className="scale-90 sm:scale-100 shadow-[0_0_30px_rgba(255,255,255,0.1)] whitespace-nowrap"
           >
             <span className="hidden sm:block">Initialize Protocol</span>
@@ -540,7 +541,7 @@ const Landing = () => {
               onMouseLeave={() => setIsHoveringCard(false)}
             >
               <AnimatedButton
-                to="/auth"
+                onClick={() => navigate("/auth", { state: { isLogin: false } })}
                 variant="solid"
                 className="px-10 py-4 text-lg w-full sm:w-auto cursor-none"
               >
@@ -748,6 +749,7 @@ const Landing = () => {
                 onMouseEnter={() => setIsHoveringCard(true)}
                 onMouseLeave={() => setIsHoveringCard(false)}
                 to="/auth"
+                state={{ isLogin: false }}
                 className="px-8 py-3 bg-[#111] border border-[#333] text-white text-xs font-extrabold rounded-md uppercase tracking-widest hover:bg-[#222] hover:border-[#444] transition-all flex items-center gap-2"
               >
                 Enter The Arena <ChevronRight className="w-4 h-4" />
@@ -907,7 +909,7 @@ const Landing = () => {
                       to="/session"
                       className="text-sm font-medium text-[#888] hover:text-white transition-colors"
                     >
-                      Discotive Edge
+                      Connective
                     </Link>
                   </li>
                   <li>

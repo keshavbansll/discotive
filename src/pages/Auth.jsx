@@ -16,7 +16,7 @@ import React, {
   useReducer,
   useMemo,
 } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import AuthLoader from "../components/AuthLoader";
 import { awardOnboardingComplete } from "../lib/scoreEngine";
@@ -941,6 +941,7 @@ function profileReducer(state, action) {
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // --- TOAST NOTIFICATION ENGINE ---
   const [toasts, setToasts] = useState([]);
@@ -956,7 +957,7 @@ const Auth = () => {
   }, []);
 
   // --- SYSTEM STATES ---
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(location.state?.isLogin !== false);
   const [step, setStep] = useState(1);
   const [systemStatus, setSystemStatus] = useState({
     loading: false,
