@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 import { signOut } from "firebase/auth";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useUserData } from "../hooks/useUserData";
 import {
   LayoutDashboard,
@@ -131,6 +132,8 @@ const MainLayout = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -211,6 +214,32 @@ const MainLayout = () => {
       navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);
+    }
+  };
+
+  // Admin check — silent, runs once auth user is known
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!auth.currentUser?.email) return;
+      try {
+        const snap = await getDocs(
+          query(
+            collection(db, "admins"),
+            where("email", "==", auth.currentUser.email),
+          ),
+        );
+        setIsAdmin(!snap.empty);
+      } catch (_) {
+        /* silent */
+      }
+    };
+    checkAdmin();
+  }, [userData?.uid]);
+
+  const handleSearch = (e) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      navigate(`/app/leaderboard?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
     }
   };
 
@@ -427,6 +456,9 @@ const MainLayout = () => {
               <Search className="w-4 h-4 text-[#555] group-focus-within:text-white shrink-0" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
                 placeholder="Search operators, vaults, assets..."
                 className="w-full bg-transparent border-none outline-none text-xs px-3 text-white placeholder-[#555] font-medium"
               />
@@ -527,34 +559,52 @@ const MainLayout = () => {
 
             {/* --- PROFILE DROPDOWN ENGINE --- */}
             <div className="relative" ref={profileMenuRef}>
+              {/* ✅ THE MISSING TRIGGER BUTTON */}
               <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 p-1 pr-2 md:pr-3 bg-[#0a0a0a] border border-[#222] hover:border-[#444] rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-[#555]"
+                onClick={() => {
+                  setShowProfileMenu(!showProfileMenu);
+                  setShowNotifMenu(false);
+                  setShowLanguageMenu(false);
+                }}
+                className={cn(
+                  "flex items-center gap-2 p-1 pl-1 pr-3 rounded-full border transition-all duration-200",
+                  showProfileMenu
+                    ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.15)]"
+                    : "bg-[#0a0a0a] border-[#222] hover:border-[#444] text-[#888] hover:text-white",
+                )}
               >
+                {/* Avatar circle */}
                 <div
                   className={cn(
-                    "w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors",
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold tracking-wide shrink-0 transition-all",
                     isGhostUser
-                      ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
-                      : "bg-[#111] text-[#888] border border-[#333]",
+                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                      : showProfileMenu
+                        ? "bg-black text-black border border-[#333]"
+                        : "bg-[#111] text-white border border-[#333]",
                   )}
                 >
                   {isGhostUser
                     ? "?"
-                    : userData?.identity?.firstName?.charAt(0) || "U"}
+                    : `${userData?.identity?.firstName?.charAt(0) || ""}${userData?.identity?.lastName?.charAt(0) || ""}` ||
+                      "U"}
                 </div>
-                <span className="hidden md:block text-xs font-bold text-white max-w-[80px] truncate">
+                {/* Name — desktop only */}
+                <span className="hidden lg:block text-xs font-bold tracking-wide max-w-[80px] truncate">
                   {isGhostUser
-                    ? "Incomplete"
-                    : userData?.identity?.firstName || "User"}
+                    ? "Setup"
+                    : userData?.identity?.firstName || "Operator"}
                 </span>
-                <ChevronDown
-                  className={cn(
-                    "hidden md:block w-3 h-3 text-[#666] transition-transform",
-                    showProfileMenu && "rotate-180",
-                  )}
-                />
+                {/* Tier badge */}
+                {userData?.tier === "PRO" && !isGhostUser && (
+                  <div className="hidden lg:flex items-center">
+                    <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">
+                      PRO
+                    </span>
+                  </div>
+                )}
               </button>
+
               <AnimatePresence mode="wait">
                 {/* 1. MAIN PROFILE MENU */}
                 {showProfileMenu && !showLanguageMenu && (
@@ -627,6 +677,20 @@ const MainLayout = () => {
                       )}
                     </div>
 
+                    {/* Admin Dashboard — only visible to admins */}
+                    {isAdmin && (
+                      <div className="px-4 py-2 border-b border-[#222]">
+                        <Link
+                          to="/app/admin"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center gap-2 text-[10px] font-black text-rose-400 hover:text-rose-300 transition-colors uppercase tracking-widest"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                          Admin Dashboard
+                        </Link>
+                      </div>
+                    )}
+
                     {/* Section 1: Localization */}
                     <div className="py-2 border-b border-[#222]">
                       <div className="px-4 py-2.5 flex items-center gap-3 text-[#ccc] text-xs md:text-sm pointer-events-none">
@@ -650,16 +714,6 @@ const MainLayout = () => {
 
                     {/* Section 2: Account Controls */}
                     <div className="py-2 border-b border-[#222]">
-                      {userData?.role === "admin" && (
-                        <Link
-                          to="/admin"
-                          onClick={() => setShowProfileMenu(false)}
-                          className="px-4 py-2.5 flex items-center gap-3 text-amber-500 hover:bg-[#111] transition-colors text-xs md:text-sm font-bold bg-amber-500/5"
-                        >
-                          <ShieldCheck className="w-4 h-4 text-amber-500" />{" "}
-                          Admin Console
-                        </Link>
-                      )}
                       <Link
                         to="/app/settings"
                         onClick={() => setShowProfileMenu(false)}
