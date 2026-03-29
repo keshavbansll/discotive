@@ -19,6 +19,7 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Search,
   Bell,
   Menu,
@@ -526,6 +527,34 @@ const MainLayout = () => {
 
             {/* --- PROFILE DROPDOWN ENGINE --- */}
             <div className="relative" ref={profileMenuRef}>
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-2 p-1 pr-2 md:pr-3 bg-[#0a0a0a] border border-[#222] hover:border-[#444] rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-[#555]"
+              >
+                <div
+                  className={cn(
+                    "w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors",
+                    isGhostUser
+                      ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                      : "bg-[#111] text-[#888] border border-[#333]",
+                  )}
+                >
+                  {isGhostUser
+                    ? "?"
+                    : userData?.identity?.firstName?.charAt(0) || "U"}
+                </div>
+                <span className="hidden md:block text-xs font-bold text-white max-w-[80px] truncate">
+                  {isGhostUser
+                    ? "Incomplete"
+                    : userData?.identity?.firstName || "User"}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "hidden md:block w-3 h-3 text-[#666] transition-transform",
+                    showProfileMenu && "rotate-180",
+                  )}
+                />
+              </button>
               <AnimatePresence mode="wait">
                 {/* 1. MAIN PROFILE MENU */}
                 {showProfileMenu && !showLanguageMenu && (
@@ -621,6 +650,16 @@ const MainLayout = () => {
 
                     {/* Section 2: Account Controls */}
                     <div className="py-2 border-b border-[#222]">
+                      {userData?.role === "admin" && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="px-4 py-2.5 flex items-center gap-3 text-amber-500 hover:bg-[#111] transition-colors text-xs md:text-sm font-bold bg-amber-500/5"
+                        >
+                          <ShieldCheck className="w-4 h-4 text-amber-500" />{" "}
+                          Admin Console
+                        </Link>
+                      )}
                       <Link
                         to="/app/settings"
                         onClick={() => setShowProfileMenu(false)}
