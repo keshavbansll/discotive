@@ -53,6 +53,8 @@ import {
   TrendingDown,
   Youtube,
   Instagram,
+  ChevronLeft,
+  ChevronRight,
   MessageCircle,
 } from "lucide-react";
 
@@ -288,6 +290,21 @@ const Profile = () => {
   const toastTimeoutRef = useRef(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // ── Month Navigation State ───────────────────────────────────────────────
+  const [viewDate, setViewDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
+
+  const handlePrevMonth = React.useCallback(() => {
+    setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  }, []);
+
+  const handleNextMonth = React.useCallback(() => {
+    setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  }, []);
+
   const activeDates = useMemo(() => {
     const s = new Set();
 
@@ -325,6 +342,22 @@ const Profile = () => {
       }
     };
   }, []);
+
+  // ── Dynamic Heatmap ─────────────────────────────────────────────────────
+  const heatmap = useMemo(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const d = new Date(year, month, i + 1);
+      const monthStr = String(d.getMonth() + 1).padStart(2, "0");
+      const dayStr = String(d.getDate()).padStart(2, "0");
+      const str = `${d.getFullYear()}-${monthStr}-${dayStr}`;
+
+      return { str, active: activeDates.has(str) };
+    });
+  }, [viewDate, activeDates]);
 
   const handleCopyPublicLink = () => {
     const url = `https://discotive.com/@${userData?.identity?.username || ""}`;
@@ -392,15 +425,6 @@ const Profile = () => {
     value: count,
     color: VAULT_COLORS[cat] || "#444",
   }));
-
-  // ── Heatmap ─────────────────────────────────────────────────────────────
-
-  const heatmap = Array.from({ length: 28 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (27 - i));
-    const str = d.toISOString().split("T")[0];
-    return { str, active: activeDates.has(str) };
-  });
 
   // ── Links ───────────────────────────────────────────────────────────────
   const LINK_DEFS = [
@@ -918,27 +942,57 @@ const Profile = () => {
 
           {/* Consistency heatmap — xl:col-span-6 */}
           <div className="md:col-span-2 xl:col-span-6 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[2rem] p-5 md:p-6">
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-2">
               <SLabel icon={Flame} iconColor="text-orange-400">
-                Consistency (28d)
+                Consistency Engine
               </SLabel>
-              <span className="text-2xl font-black text-white font-mono">
+              <span className="text-2xl font-black text-white font-mono leading-none">
                 {streak}
                 <span className="text-sm text-white/30 font-sans ml-1">
                   days
                 </span>
               </span>
             </div>
-            <div className="grid grid-cols-7 gap-1.5">
+
+            {/* Month Navigator */}
+            <div className="flex items-center justify-center gap-4 mt-1 mb-5">
+              <button
+                onClick={handlePrevMonth}
+                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/[0.03] border border-[#1a1a1a] text-[#888] hover:text-white hover:bg-white/[0.08] transition-all"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#888] w-24 text-center select-none">
+                {viewDate.toLocaleDateString("en-US", {
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+
+              <button
+                onClick={handleNextMonth}
+                disabled={
+                  viewDate.getMonth() === new Date().getMonth() &&
+                  viewDate.getFullYear() === new Date().getFullYear()
+                }
+                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/[0.03] border border-[#1a1a1a] text-[#888] hover:text-white hover:bg-white/[0.08] transition-all disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Dynamic timeline (Vertical Pill bars) */}
+            <div className="flex items-center justify-between gap-0.5 sm:gap-1 mb-2 h-8 sm:h-10">
               {heatmap.map((day, i) => (
                 <div
                   key={i}
                   title={day.str}
                   className={cn(
-                    "aspect-square rounded-[3px] transition-all",
+                    "flex-1 h-full max-w-[10px] sm:max-w-[12px] rounded-full border transition-all",
                     day.active
-                      ? "bg-amber-500 shadow-[0_0_4px_rgba(245,158,11,0.4)]"
-                      : "bg-white/[0.04]",
+                      ? "bg-amber-500 border-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.4)]"
+                      : "bg-white/[0.04] border-white/[0.02]",
                   )}
                 />
               ))}
