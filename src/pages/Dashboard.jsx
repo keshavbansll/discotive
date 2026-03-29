@@ -281,6 +281,22 @@ const Dashboard = () => {
   const [isCommitting, setIsCommitting] = useState(false);
   const [nodesCount, setNodesCount] = useState(0);
 
+  // ── Month Navigation State ───────────────────────────────────────────────
+  // Always set to the 1st of the month to prevent day-overflow calculation bugs
+  const [viewDate, setViewDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
+
+  const handlePrevMonth = useCallback(() => {
+    setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  }, []);
+
+  const handleNextMonth = useCallback(() => {
+    setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  }, []);
+
   // ── Boot sequence ────────────────────────────────────────────────────────
   useEffect(() => {
     if (userData?.uid) processDailyConsistency(userData.uid);
@@ -480,7 +496,7 @@ const Dashboard = () => {
     return chartData[chartData.length - 1].score - chartData[0].score;
   }, [chartData]);
 
-  // ── Heatmap data (35 days = 5-week grid) ────────────────────────────────
+  // ── Heatmap data (Dynamic to Selected Month) ─────────────────────────────
   const heatmapData = useMemo(() => {
     const active = new Set();
     (userData?.journal_ledger || []).forEach(
@@ -498,13 +514,20 @@ const Dashboard = () => {
     const last = userData?.discotiveScore?.lastLoginDate;
     if (last) active.add(last.split("T")[0]);
 
-    return Array.from({ length: 35 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (34 - i));
-      const str = d.toISOString().split("T")[0];
+    // Use viewDate to determine the target month and year
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const d = new Date(year, month, i + 1);
+      const monthStr = String(d.getMonth() + 1).padStart(2, "0");
+      const dayStr = String(d.getDate()).padStart(2, "0");
+      const str = `${d.getFullYear()}-${monthStr}-${dayStr}`;
+
       return { date: str, active: active.has(str), dayNum: d.getDate() };
     });
-  }, [userData]);
+  }, [userData, viewDate]);
 
   // ── Gantt data ───────────────────────────────────────────────────────────
   const ganttData = useMemo(() => {
@@ -764,7 +787,12 @@ const Dashboard = () => {
             {/* Chart */}
             <div className="flex-1 min-h-[130px] relative">
               {chartData.length >= 2 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                  minWidth={1}
+                  minHeight={130}
+                >
                   <AreaChart
                     data={chartData}
                     margin={{ top: 4, right: 4, left: -32, bottom: 0 }}
@@ -1235,18 +1263,43 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
-            <p className="text-[9px] text-white/20 mb-4 mt-1">
-              35-day execution heatmap
-            </p>
+            {/* Month Navigator */}
+            <div className="flex items-center justify-center gap-4 mt-2 mb-5">
+              <button
+                onClick={handlePrevMonth}
+                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] transition-all"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
 
-            {/* 5-week grid (7 cols) */}
-            <div className="grid grid-cols-7 gap-1.5 mb-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/60 w-24 text-center select-none">
+                {viewDate.toLocaleDateString("en-US", {
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+
+              <button
+                onClick={handleNextMonth}
+                // Optional: Disable going into future months
+                disabled={
+                  viewDate.getMonth() === new Date().getMonth() &&
+                  viewDate.getFullYear() === new Date().getFullYear()
+                }
+                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] transition-all disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Dynamic timeline (Vertical Pill bars) */}
+            <div className="flex items-center justify-between gap-0.5 sm:gap-1 mb-5 h-8 sm:h-10">
               {heatmapData.map((day, i) => (
                 <div
                   key={i}
                   title={day.date}
                   className={cn(
-                    "aspect-square rounded-[4px] border transition-all",
+                    "flex-1 h-full max-w-[10px] sm:max-w-[12px] rounded-full border transition-all",
                     day.active
                       ? "bg-amber-500 border-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.4)]"
                       : "bg-white/[0.04] border-white/[0.04]",
@@ -1323,7 +1376,7 @@ const Dashboard = () => {
           >
             <div className="flex items-center justify-between mb-5">
               <WLabel icon={Map} iconColor="text-indigo-400">
-                Execution Timeline — 90D Horizon
+                Execution Timeline - 90D Horizon
               </WLabel>
               <div className="flex items-center gap-3">
                 {isFetchingMap && (
