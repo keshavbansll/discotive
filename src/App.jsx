@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 import GlobalLoader from "./components/GlobalLoader";
 import React, { Suspense, lazy } from "react";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import MainLayout from "./layouts/MainLayout";

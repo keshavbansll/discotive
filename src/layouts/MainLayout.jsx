@@ -580,7 +580,7 @@ const MainLayout = () => {
                     isGhostUser
                       ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
                       : showProfileMenu
-                        ? "bg-black text-black border border-[#333]"
+                        ? "bg-black text-white border border-[#333]"
                         : "bg-[#111] text-white border border-[#333]",
                   )}
                 >
