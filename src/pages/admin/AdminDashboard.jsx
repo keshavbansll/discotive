@@ -46,6 +46,8 @@ import {
   TrendingUp,
   Shield,
   LayoutDashboard,
+  Video as VideoIcon,
+  PlusCircle,
 } from "lucide-react";
 import {
   PieChart,
@@ -56,6 +58,7 @@ import {
   Legend,
 } from "recharts";
 import { cn } from "../../components/ui/BentoCard";
+import { addDoc, serverTimestamp } from "firebase/firestore";
 
 // ============================================================================
 // HELPERS
@@ -180,6 +183,14 @@ const AdminDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [error, setError] = useState(null);
+
+  const [learnForm, setLearnForm] = useState({
+    type: "video",
+    title: "",
+    link: "",
+    category: "",
+  });
+  const [isSubmittingLearn, setIsSubmittingLearn] = useState(false);
 
   // ── DATA FETCHER ──────────────────────────────────────────────────────────
   const fetchAllData = useCallback(async () => {
@@ -763,6 +774,116 @@ const AdminDashboard = () => {
               )}
             </div>
           </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55 }}
+          className="bg-[#0a0a0c] border border-white/[0.05] rounded-[2rem] p-6 flex flex-col md:col-span-3"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-fuchsia-400" /> Learn Engine
+              Management
+            </h2>
+          </div>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSubmittingLearn(true);
+              try {
+                const suffix = Math.floor(100000 + Math.random() * 900000);
+                const isVideo = learnForm.type === "video";
+                const payload = {
+                  title: learnForm.title,
+                  url: learnForm.link,
+                  category: learnForm.category,
+                  learnId: `discotive_${isVideo ? "video" : "certificate"}_${suffix}`,
+                  createdAt: serverTimestamp(),
+                };
+
+                await addDoc(
+                  collection(
+                    db,
+                    isVideo ? "discotive_videos" : "discotive_certificates",
+                  ),
+                  payload,
+                );
+                setLearnForm({
+                  type: "video",
+                  title: "",
+                  link: "",
+                  category: "",
+                });
+                // Trigger toast success here
+              } catch (err) {
+                console.error(err);
+              }
+              setIsSubmittingLearn(false);
+            }}
+            className="flex-1 flex flex-col gap-3"
+          >
+            <div className="flex bg-[#111] p-1 rounded-xl border border-white/[0.05]">
+              <button
+                type="button"
+                onClick={() => setLearnForm({ ...learnForm, type: "video" })}
+                className={cn(
+                  "flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg",
+                  learnForm.type === "video"
+                    ? "bg-white/10 text-white"
+                    : "text-white/30",
+                )}
+              >
+                Video
+              </button>
+              <button
+                type="button"
+                onClick={() => setLearnForm({ ...learnForm, type: "cert" })}
+                className={cn(
+                  "flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg",
+                  learnForm.type === "cert"
+                    ? "bg-white/10 text-white"
+                    : "text-white/30",
+                )}
+              >
+                Certificate
+              </button>
+            </div>
+
+            <input
+              required
+              value={learnForm.title}
+              onChange={(e) =>
+                setLearnForm({ ...learnForm, title: e.target.value })
+              }
+              placeholder="Material Title"
+              className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/20 outline-none focus:border-fuchsia-500/50"
+            />
+            <input
+              required
+              value={learnForm.link}
+              onChange={(e) =>
+                setLearnForm({ ...learnForm, link: e.target.value })
+              }
+              placeholder={
+                learnForm.type === "video"
+                  ? "YouTube ID (e.g., dQw4w9WgXcQ)"
+                  : "Verification URL"
+              }
+              className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/20 outline-none focus:border-fuchsia-500/50"
+            />
+
+            <button
+              disabled={isSubmittingLearn}
+              type="submit"
+              className="w-full mt-auto py-3 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/20 text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              {isSubmittingLearn ? "Deploying..." : "Inject to Database"}
+            </button>
+          </form>
         </motion.div>
 
         {/* ── BOTTOM ROW: FEEDBACK, TICKETS, REPORTS ── */}

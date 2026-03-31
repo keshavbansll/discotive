@@ -47,6 +47,7 @@ import { MobileEditSheet } from "../components/roadmap/MobileEditSheet.jsx";
 import { ShortcutsPanel } from "../components/roadmap/ShortcutsPanel.jsx";
 import { ConflictDialog } from "../components/roadmap/ConflictDialog.jsx";
 import { JournalModal } from "../components/roadmap/JournalModal.jsx";
+import { MediaExplorerModal } from "../components/roadmap/MediaExplorerModal.jsx";
 
 import {
   Activity,
@@ -117,6 +118,7 @@ const Roadmap = () => {
     isOpen: false,
     targetNodeId: null,
   });
+
   const [videoModal, setVideoModal] = useState({
     isOpen: false,
     targetNodeId: null,
@@ -189,17 +191,61 @@ const Roadmap = () => {
   }, []);
 
   const markVideoWatched = useCallback(
-    (nodeId) => {
+    (nodeId, scoreData) => {
       setNodes2((nds) =>
         nds.map((n) =>
           n.id === nodeId ? { ...n, data: { ...n.data, isWatched: true } } : n,
         ),
       );
-      addPendingScore(15);
+
+      // Proportional score logic execution
+      if (scoreData) {
+        addPendingScore(scoreData.earned);
+        addToast(scoreData.message, "green");
+      } else {
+        // Fallback for legacy calls
+        addPendingScore(10);
+        addToast("Media logged. +10 pts pending save.", "green");
+      }
+
       setHasUnsavedChanges(true);
-      addToast("Media logged. +15 pts pending save.", "green");
     },
     [addPendingScore, addToast],
+  );
+
+  const extractYouTubeId = (url) => {
+    if (!url) return null;
+    const match = url.match(
+      /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/i,
+    );
+    return match ? match[1] : url; // Extracts ID, or falls back to string if it's already an ID
+  };
+
+  // --- UPDATE handleMediaSync ---
+  const handleMediaSync = useCallback(
+    (nodeId, media) => {
+      setNodes2((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  // CHANGED: Run the URL through the parser
+                  youtubeId: extractYouTubeId(media.url || media.youtubeId),
+                  title: media.title,
+                  learnId: media.learnId,
+                  platform: "YouTube",
+                },
+              }
+            : n,
+        ),
+      );
+      setVideoModal({ isOpen: false, targetNodeId: null });
+      setHasUnsavedChanges(true);
+      addToast("Media Vault payload attached.", "green");
+    },
+    [addToast],
   );
 
   // ── Firestore cloud save ──────────────────────────────────────────────────
@@ -798,6 +844,12 @@ const Roadmap = () => {
             addToast={addToast}
           />
         )}
+
+        <MediaExplorerModal
+          isOpen={videoModal.isOpen}
+          onClose={() => setVideoModal({ isOpen: false, targetNodeId: null })}
+          onSelect={(media) => handleMediaSync(videoModal.targetNodeId, media)}
+        />
 
         {/* Pro gate modal */}
         <AnimatePresence>

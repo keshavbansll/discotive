@@ -397,59 +397,40 @@ export const checkPendingLearnAsset = (vault = [], discotiveLearnId) => {
   );
 };
 
-// ── Score Calculation ──────────────────────────────────────────────────────
-
 /**
- * Calculate earned score based on video watch percentage.
- * Tier breakdown:
- *   ≥ 95% → full score
- *   ≥ 75% → 75% of score
- *   ≥ 50% → 50% of score
- *   ≥ 25% → 25% of score
- *   < 25% → 0 pts
+ * Calculate earned score based on exact video watch percentage.
+ * STRICT ENFORCEMENT: Max score is locked to 10 points.
+ * Yields rounded integer score (e.g., 55% watched = 6 pts).
  */
-export const calculateVideoScore = (baseScore, watchedPct) => {
+export const calculateVideoScore = (watchedPct) => {
+  const MAX_SCORE = 10;
   const pct = Math.max(0, Math.min(100, watchedPct || 0));
 
   if (pct >= 95) {
     return {
-      earned: baseScore,
+      earned: MAX_SCORE,
       tier: "full",
       pct,
-      message: `Video completed! Full +${baseScore} pts awarded.`,
+      message: `Video completed! Full +${MAX_SCORE} pts awarded.`,
     };
   }
-  if (pct >= 75) {
-    const earned = Math.floor(baseScore * 0.75);
+
+  // CHANGED: Use Math.round to output clean integers (5.5 -> 6, 2.3 -> 2)
+  const earned = Math.round((pct / 100) * MAX_SCORE);
+
+  if (earned > 0) {
     return {
       earned,
-      tier: "high",
+      tier: "partial",
       pct,
-      message: `${Math.floor(pct)}% watched — +${earned} pts (75% of max). Watch to completion for full score.`,
+      message: `${Math.floor(pct)}% watched — +${earned} pts awarded proportionally.`,
     };
   }
-  if (pct >= 50) {
-    const earned = Math.floor(baseScore * 0.5);
-    return {
-      earned,
-      tier: "mid",
-      pct,
-      message: `${Math.floor(pct)}% watched — +${earned} pts (50% of max). Keep watching!`,
-    };
-  }
-  if (pct >= 25) {
-    const earned = Math.floor(baseScore * 0.25);
-    return {
-      earned,
-      tier: "low",
-      pct,
-      message: `${Math.floor(pct)}% watched — only +${earned} pts (25% of max).`,
-    };
-  }
+
   return {
     earned: 0,
     tier: "none",
     pct,
-    message: `Watch at least 25% to earn any score. Currently at ${Math.floor(pct)}%.`,
+    message: `Watch more to earn points. Currently at ${Math.floor(pct)}%.`,
   };
 };

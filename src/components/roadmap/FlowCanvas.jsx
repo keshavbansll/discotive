@@ -45,6 +45,9 @@ import {
   Search,
   X,
   Filter,
+  Trash2,
+  Copy,
+  Palette,
 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
@@ -912,13 +915,6 @@ const ContextMenuBase = ({ pos, children, onClose }) => (
   </motion.div>
 );
 
-const {
-  Plus: PlusIcon,
-  Copy: CopyIcon,
-  Trash2: Trash2Icon,
-  Palette: PaletteIcon,
-} = await import("lucide-react").catch(() => ({}));
-
 const PaneContextMenu = ({
   pos,
   nodes,
@@ -932,7 +928,6 @@ const PaneContextMenu = ({
   onClose,
   setActiveEditNodeId,
 }) => {
-  const { Plus: PlusIco } = require("lucide-react");
   const addNode = (type, extra = {}) => {
     const max = TIER_LIMITS[subscriptionTier] || TIER_LIMITS.free;
     if (nodes.length >= max) {
@@ -1006,7 +1001,7 @@ const NodeContextMenu = ({
   onClose,
 }) => {
   const { node } = pos;
-  const { Trash2: T2, Copy: Cp, Palette: Pa } = require("lucide-react");
+
   return (
     <ContextMenuBase pos={pos} onClose={onClose}>
       <button
@@ -1059,7 +1054,7 @@ const EdgeContextMenu = ({
   onClose,
 }) => {
   const { edge } = pos;
-  const { Trash2: T2 } = require("lucide-react");
+
   const TYPES = ["core-core", "core-branch", "branch-sub", "open"];
   return (
     <ContextMenuBase pos={pos} onClose={onClose}>

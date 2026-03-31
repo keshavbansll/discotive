@@ -1,17 +1,23 @@
 /**
- * @fileoverview VideoWidgetNode — YouTube / external media proxy
- * Fixed: window.dispatchEvent("VIDEO_WATCHED") → useRoadmap().markVideoWatched()
- *        window.dispatchEvent("OPEN_VIDEO_MODAL") → useRoadmap().openVideoModal()
+ * @fileoverview VideoWidgetNode — Proportional Proof-of-Work Video Engine
  */
 import React, { useState, memo } from "react";
 import { Handle, Position } from "reactflow";
-import { Video, Check } from "lucide-react";
+import { Video, Check, AlertTriangle } from "lucide-react";
 import { cn } from "../../ui/BentoCard";
 import { useRoadmap } from "../../../contexts/RoadmapContext.jsx";
+import { useYouTubePlayer } from "../../../hooks/useYouTubePlayer";
+import { calculateVideoScore } from "../../../lib/discotiveLearn";
 
 export const VideoWidgetNode = memo(({ id, data, selected }) => {
   const { openVideoModal, markVideoWatched } = useRoadmap();
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [showIntercept, setShowIntercept] = useState(false);
+
+  // Custom hook extracts progress telemetry safely
+  const { containerRef, isReady, playerState, progress } = useYouTubePlayer(
+    data.youtubeId,
+  );
+  const watchPct = progress?.percentage || 0;
 
   const isWatched = !!data.isWatched;
   const bc = selected
@@ -23,73 +29,100 @@ export const VideoWidgetNode = memo(({ id, data, selected }) => {
     ? "0 0 50px rgba(56,189,248,0.25), 0 20px 40px rgba(0,0,0,0.6)"
     : "0 20px 40px rgba(0,0,0,0.4)";
 
+  const handleMarkComplete = (e) => {
+    e.stopPropagation();
+    if (watchPct < 95 && !isWatched) {
+      setShowIntercept(true); // Trigger early exit penalty warning
+    } else {
+      executeCompletion();
+    }
+  };
+
+  const executeCompletion = () => {
+    setShowIntercept(false);
+    // Score is strictly calculated proportionally based on max 10
+    const scoreData = calculateVideoScore(watchPct);
+    markVideoWatched(id, scoreData);
+  };
+
   return (
     <div
       className={cn(
-        "w-[340px] bg-[#0a0a0c]/95 backdrop-blur-2xl border rounded-[1.5rem] p-2.5 relative transition-all duration-300 group",
+        "w-[340px] bg-[#0a0a0c]/95 backdrop-blur-2xl border rounded-[1.5rem] p-2.5 relative transition-all duration-300 group overflow-hidden",
         selected ? "scale-[1.03] z-50" : "scale-100 z-10",
       )}
       style={{ borderColor: bc, boxShadow: bs }}
-      role="article"
-      aria-label={`Video widget: ${data.title || "No video linked"}`}
     >
       <Handle
         type="target"
         position={Position.Left}
         id="left"
-        className="!w-4 !h-4 !bg-[#111] !border-2 !border-sky-400 relative before:absolute before:-inset-6 before:content-['']"
+        className="!w-4 !h-4 !bg-[#111] !border-2 !border-sky-400 relative before:absolute before:-inset-6"
       />
       <Handle
         type="source"
         position={Position.Right}
         id="right"
-        className="!w-4 !h-4 !bg-[#111] !border-2 !border-sky-400 relative before:absolute before:-inset-6 before:content-['']"
+        className="!w-4 !h-4 !bg-[#111] !border-2 !border-sky-400 relative before:absolute before:-inset-6"
       />
 
-      {/* Thumbnail / player */}
+      {/* Intercept Overlay for Proportional Scoring */}
+      {showIntercept && (
+        <div className="absolute inset-0 z-50 bg-[#0a0a0c]/95 backdrop-blur-xl flex flex-col items-center justify-center p-5 text-center rounded-[1.5rem] border border-sky-500/30">
+          <AlertTriangle className="w-8 h-8 text-amber-500 mb-3" />
+          <h4 className="text-white font-black text-sm mb-1">
+            Early Exit Detected
+          </h4>
+          <p className="text-[#888] text-[10px] mb-4">
+            You've only watched {Math.floor(watchPct)}%. Marking complete now
+            yields a mathematically penalized score.
+          </p>
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={() => setShowIntercept(false)}
+              className="flex-1 py-2 bg-[#111] text-white text-[9px] font-bold rounded-lg hover:bg-[#222]"
+            >
+              Resume Watch
+            </button>
+            <button
+              onClick={executeCompletion}
+              className="flex-1 py-2 bg-sky-500 text-black text-[9px] font-black rounded-lg"
+            >
+              Accept Penalty
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Video Embed */}
       {data.youtubeId ? (
         <div className="w-full h-[180px] rounded-xl overflow-hidden relative bg-black border border-[#1a1a1a]">
-          {isPlaying ? (
-            <iframe
-              width="100%"
-              height="100%"
-              src={`https://www.youtube.com/embed/${data.youtubeId}?autoplay=1`}
-              title={data.title || "YouTube video"}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="border-0"
+          {/* CRITICAL FIX: Isolated container for YouTube to safely hijack/replace */}
+          <div
+            ref={containerRef}
+            className="absolute inset-0 w-full h-full border-0"
+          />
+
+          {/* Progress bar stays safely OUTSIDE the hijacked element */}
+          <div className="absolute bottom-0 left-0 h-1 bg-sky-500/20 w-full z-10 pointer-events-none">
+            <div
+              className="h-full bg-sky-500 transition-all duration-1000"
+              style={{ width: `${watchPct}%` }}
             />
-          ) : (
-            <button
-              className="w-full h-full relative cursor-pointer group/play"
-              onClick={() => setIsPlaying(true)}
-              aria-label={`Play: ${data.title || "video"}`}
-            >
-              {data.thumbnailUrl && (
-                <img
-                  src={data.thumbnailUrl}
-                  alt="Video thumbnail"
-                  className="w-full h-full object-cover opacity-80 group-hover/play:scale-105 transition-transform duration-700"
-                />
-              )}
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <div className="w-14 h-14 bg-[#0a0a0c]/70 backdrop-blur-md rounded-full flex items-center justify-center pl-1.5 border border-white/20 hover:bg-sky-500/25 hover:border-sky-400 transition-all shadow-[0_0_30px_rgba(0,0,0,0.8)]">
-                  <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[14px] border-l-white border-b-[8px] border-b-transparent" />
-                </div>
-              </div>
-            </button>
-          )}
+          </div>
         </div>
       ) : (
         <div className="w-full h-[180px] rounded-xl bg-[#0d0d0d] border border-[#1a1a1a] flex flex-col items-center justify-center gap-3">
-          <Video className="w-8 h-8 text-sky-500/30" aria-hidden="true" />
+          <Video className="w-8 h-8 text-sky-500/30" />
           <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => openVideoModal(id)}
-            aria-label="Embed video source"
-            className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-black text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_20px_rgba(56,189,248,0.2)] focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:outline-none"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation(); // Stops React Flow from selecting other nodes
+              openVideoModal(id); // Forces the EXACT video node ID
+            }}
+            className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-black text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_20px_rgba(56,189,248,0.2)]"
           >
-            Embed Source
+            Attach Media Source
           </button>
         </div>
       )}
@@ -105,21 +138,21 @@ export const VideoWidgetNode = memo(({ id, data, selected }) => {
           >
             {data.title || "External Protocol Video"}
           </h4>
-          <p className="text-[9px] font-bold text-sky-400 uppercase tracking-widest mt-0.5">
-            {data.platform || "Media Source"}
+          <p className="text-[9px] font-bold text-sky-400 uppercase tracking-widest mt-0.5 flex gap-2">
+            <span>{data.platform || "Media Source"}</span>
+            {data.learnId && (
+              <span className="text-white/30 font-mono">
+                ID: {data.learnId.split("_").pop()}
+              </span>
+            )}
           </p>
         </div>
         {data.youtubeId && (
           <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => !isWatched && markVideoWatched(id)}
+            onClick={handleMarkComplete}
             disabled={isWatched}
-            title={isWatched ? "Marked as watched" : "Mark as watched"}
-            aria-label={
-              isWatched ? "Video marked as watched" : "Mark video as watched"
-            }
             className={cn(
-              "w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 transition-all focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none",
+              "w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 transition-all",
               isWatched
                 ? "bg-sky-500/15 border-sky-500/40 text-sky-400"
                 : "bg-[#111] border-[#333] hover:border-sky-400 text-transparent hover:text-sky-400/50",

@@ -36,6 +36,7 @@ export const generateExecutionMap = async (
   userData,
   qaAnswers,
   subscriptionTier,
+  learnInventory = { videos: [], certificates: [] },
 ) => {
   try {
     const isPro = subscriptionTier.toLowerCase() === "pro";
@@ -53,59 +54,33 @@ export const generateExecutionMap = async (
 
       CALIBRATION DATA: ${JSON.stringify(qaAnswers)}
 
+      DISCOTIVE LEARN INVENTORY (STRICT USAGE):
+      Videos: ${JSON.stringify(learnInventory.videos)}
+      Certificates: ${JSON.stringify(learnInventory.certificates)}
+
       ═══════════════════════════════════════════════════════════
       TOPOLOGY RULES (MANDATORY — VIOLATING THESE BREAKS THE UI)
       ═══════════════════════════════════════════════════════════
       1. Generate EXACTLY ${minExecutionNodes}–${maxExecutionNodes} "core" + "branch" nodes total.
       2. ZERO floating nodes. Every node must have at least 1 incoming OR outgoing edge.
       3. TREE STRUCTURE: Each core branches into 2–4 branch nodes max. 
-         Branches may have 1–2 children. Do NOT create a mesh or ring topology.
       4. CHRONOLOGICAL SPINE: Core nodes represent sequential milestones (n1→n2→n3).
-         Branch nodes represent parallel tasks hanging off a core.
-      5. BALANCE: No layer should have more than 5 nodes. Spread depth over breadth.
-      6. CONNECTOR NODES: For each core node that requires an external platform
-         (e.g. posting to LinkedIn, submitting to GitHub, watching Coursera), add ONE
-         connectorNode child. Choose app from:
-         [LinkedIn, GitHub, YouTube, Unstop, LeetCode, HackerRank, Figma, Notion, Coursera, Gmail, Behance, Dribbble, ProductHunt, Medium]
-      ${isPro ? `7. Add exactly 1 "radarWidget" connected to the FIRST core node only.` : ""}
+      5. CONNECTOR NODES: For external platforms, attach ONE connectorNode child.
+      6. DISCOTIVE LEARN ATTACHMENTS (CRITICAL):
+         - If a task requires learning a concept, you MUST attach a "videoWidget" and use a "learnId" and "youtubeId" from the provided Videos inventory.
+         - If a task requires proving a skill, you MUST attach an "assetWidget" and set "requiredLearnId" from the Certificates inventory. DO NOT makeup IDs. If no matching inventory exists, use generic assetWidget without requiredLearnId.
 
       ═══════════════════════════════════════════════════════════
       NODE TYPES
       ═══════════════════════════════════════════════════════════
-      - "core"          → Main spine milestone. Title = specific career goal.
-      - "branch"        → Parallel task. Hangs off a core via sourceHandle "bottom"→targetHandle "top"
-                          OR off another branch via "right"→"left" for horizontal flow.
-      - "assetWidget"   → Document/proof placeholder. 2–3 total. Only where a document is needed.
-      - "videoWidget"   → Learning resource. 1–2 total. Only for research-heavy nodes.
-      - "connectorNode" → External app integration. Use app field from the list above.
-      ${isPro ? `- "radarWidget"   → Skills radar. Exactly 1, attached to first core node.` : ""}
+      - "core"          → Main spine milestone.
+      - "branch"        → Parallel task.
+      - "assetWidget"   → Document/proof. Format: { "id":"...", "type":"assetWidget", "label":"...", "requiredLearnId":"discotive_certificate_XXXXXX" }
+      - "videoWidget"   → Learning resource. Format: { "id":"...", "type":"videoWidget", "title":"...", "youtubeId":"...", "learnId":"discotive_video_XXXXXX", "baseScore": 10 }
+      - "connectorNode" → External app integration.
+      ${isPro ? `- "radarWidget"   → Skills radar. Exactly 1, attached to first core.` : ""}
 
-      ═══════════════════════════════════════════════════════════
-      EDGE HANDLE CONVENTION
-      ═══════════════════════════════════════════════════════════
-      - Core→Core (sequential):    sourceHandle:"right", targetHandle:"left",  connType:"core-core"
-      - Core→Branch (decompose):   sourceHandle:"bottom", targetHandle:"top",  connType:"core-branch"
-      - Branch→Branch (sub-task):  sourceHandle:"right", targetHandle:"left",  connType:"branch-sub"
-      - Any→Widget (attachment):   sourceHandle:"bottom", targetHandle:"top",  connType:"branch-sub"
-      - Any→Connector (platform):  sourceHandle:"bottom", targetHandle:"top",  connType:"branch-sub"
-
-      ═══════════════════════════════════════════════════════════
-      OUTPUT FORMAT — RETURN ONLY RAW JSON. NO MARKDOWN. NO EXPLANATIONS.
-      ═══════════════════════════════════════════════════════════
-      {
-        "nodes": [
-          { "id":"n1", "type":"core",          "title":"...", "subtitle":"...", "desc":"...", "deadline_offset_days":14, "tasks":["Task 1","Task 2","Task 3"] },
-          { "id":"n2", "type":"branch",         "title":"...", "subtitle":"...", "desc":"...", "deadline_offset_days":21, "tasks":["Task 1"] },
-          { "id":"n3", "type":"assetWidget",    "label":"Resume v2", "assetType":"Document" },
-          { "id":"n4", "type":"videoWidget",    "title":"Learn X", "platform":"YouTube" },
-          { "id":"n5", "type":"connectorNode",  "app":"LinkedIn" }
-        ],
-        "edges": [
-          { "source":"n1", "target":"n2", "sourceHandle":"bottom", "targetHandle":"top", "connType":"core-branch" },
-          { "source":"n2", "target":"n3", "sourceHandle":"bottom", "targetHandle":"top", "connType":"branch-sub"  },
-          { "source":"n2", "target":"n5", "sourceHandle":"bottom", "targetHandle":"top", "connType":"branch-sub"  }
-        ]
-      }
+      OUTPUT FORMAT — RETURN ONLY RAW JSON. NO MARKDOWN.
     `;
 
     const result = await model.generateContent({
