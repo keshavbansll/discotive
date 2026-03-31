@@ -360,7 +360,7 @@ const Profile = () => {
   }, [viewDate, activeDates]);
 
   const handleCopyPublicLink = () => {
-    const url = `https://discotive.com/@${userData?.identity?.username || ""}`;
+    const url = `https://discotive.in/@${userData?.identity?.username || ""}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -1058,7 +1058,7 @@ const Profile = () => {
               </p>
               <h3 className="text-lg font-black text-white">Public Profile</h3>
               <p className="text-xs text-[#555] mt-1">
-                discotive.com/
+                discotive.in/
                 <span className="text-amber-400/70">
                   @{userData.identity?.username || "handle"}
                 </span>{" "}
