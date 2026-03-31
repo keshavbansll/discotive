@@ -8,7 +8,14 @@
  * No onSnapshot listeners. Data is fetched once on mount with a manual refresh option.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -19,6 +26,8 @@ import {
   getCountFromServer,
   orderBy,
   limit,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db, auth } from "../../firebase";
 import {
@@ -37,6 +46,7 @@ import {
   Clock,
   UserPlus,
   ChevronRight,
+  ChevronDown,
   Award,
   FileText,
   Link as LinkIcon,
@@ -48,20 +58,157 @@ import {
   LayoutDashboard,
   Video as VideoIcon,
   PlusCircle,
+  X,
+  Search,
+  Plus,
+  Trash2,
 } from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "../../components/ui/BentoCard";
-import { addDoc, serverTimestamp } from "firebase/firestore";
 
 // ============================================================================
-// HELPERS
+// TAXONOMY DICTIONARIES (Synced from Auth)
+// ============================================================================
+
+const MACRO_DOMAINS = [
+  "Engineering",
+  "Design",
+  "Filmmaking",
+  "Business/Operations",
+  "Marketing",
+  "Sales",
+  "Science",
+  "Healthcare/Medical",
+  "Arts/Humanities",
+  "Legal",
+  "Finance/Accounting",
+  "Content Creation",
+  "Education/Academia",
+  "Architecture",
+  "Government/Policy",
+].sort();
+
+const MICRO_NICHES = [
+  "Software Engineer",
+  "Frontend Developer",
+  "Backend Developer",
+  "Full-Stack Developer",
+  "AI/ML Engineer",
+  "Data Scientist",
+  "Data Analyst",
+  "Data Engineer",
+  "DevOps Engineer",
+  "Cloud Architect",
+  "Blockchain Developer",
+  "Cybersecurity Analyst",
+  "Game Developer",
+  "UI/UX Designer",
+  "Product Designer",
+  "Graphic Designer",
+  "3D Modeler",
+  "Animator",
+  "Director",
+  "Producer",
+  "Cinematographer",
+  "Video Editor",
+  "Screenwriter",
+  "Actor",
+  "Founder / CEO",
+  "COO",
+  "CTO",
+  "Product Manager",
+  "Project Manager",
+  "Consultant",
+  "Venture Capitalist",
+  "Investment Banker",
+  "Financial Analyst",
+  "Accountant",
+  "Growth Marketer",
+  "Digital Marketer",
+  "SEO Specialist",
+  "Social Media Manager",
+  "B2B Sales",
+  "Account Executive",
+  "Copywriter",
+  "Journalist",
+  "Public Relations",
+  "Physician",
+  "Surgeon",
+  "Psychologist",
+  "Researcher",
+  "Professor",
+  "Corporate Lawyer",
+].sort();
+
+const RAW_SKILLS = [
+  "Python",
+  "JavaScript",
+  "TypeScript",
+  "React.js",
+  "Next.js",
+  "Vue.js",
+  "Node.js",
+  "Express.js",
+  "Django",
+  "Flask",
+  "Spring Boot",
+  "Java",
+  "C++",
+  "C#",
+  "C",
+  "Go",
+  "Rust",
+  "Ruby",
+  "Swift",
+  "Kotlin",
+  "SQL",
+  "PostgreSQL",
+  "MySQL",
+  "MongoDB",
+  "Redis",
+  "Firebase",
+  "AWS",
+  "Google Cloud (GCP)",
+  "Microsoft Azure",
+  "Docker",
+  "Kubernetes",
+  "Git",
+  "Machine Learning",
+  "Deep Learning",
+  "TensorFlow",
+  "PyTorch",
+  "Computer Vision",
+  "NLP",
+  "Pandas",
+  "Tableau",
+  "PowerBI",
+  "Blockchain",
+  "Solidity",
+  "Figma",
+  "Adobe XD",
+  "Adobe Photoshop",
+  "Adobe Illustrator",
+  "Adobe Premiere Pro",
+  "Adobe After Effects",
+  "DaVinci Resolve",
+  "Blender",
+  "Unity",
+  "Unreal Engine",
+  "SEO",
+  "SEM",
+  "Google Analytics",
+  "Facebook Ads",
+  "Copywriting",
+  "B2B Sales",
+  "Cold Calling",
+  "Public Speaking",
+  "Financial Modeling",
+  "Project Management",
+  "Agile",
+].sort();
+
+// ============================================================================
+// HELPERS & CUSTOM COMPONENTS
 // ============================================================================
 
 const getAssetCategoryIcon = (cat) => {
@@ -86,9 +233,13 @@ const timeAgo = (isoDate) => {
   return `${Math.floor(hrs / 24)}d ago`;
 };
 
-// ============================================================================
-// SUB-COMPONENTS
-// ============================================================================
+const extractYouTubeId = (url) => {
+  if (!url) return null;
+  const match = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/i,
+  );
+  return match ? match[1] : url;
+};
 
 const StatCard = ({ label, value, icon: Icon, color, subtext, delay = 0 }) => (
   <motion.div
@@ -149,13 +300,187 @@ const CustomPieTooltip = ({ active, payload, totalUsers }) => {
 };
 
 const EmptyState = ({ icon: Icon, message }) => (
-  <div className="flex flex-col items-center justify-center py-8 text-center">
+  <div className="flex flex-col items-center justify-center py-8 text-center h-full">
     <Icon className="w-7 h-7 text-white/10 mb-3" />
     <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
       {message}
     </p>
   </div>
 );
+
+// --- Dropdowns for Modals ---
+const SearchableSelect = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+  allowCustom = true,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState(value || "");
+  const wrapperRef = useRef(null);
+
+  useEffect(() => setQuery(value || ""), [value]);
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target))
+        setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(query.toLowerCase()),
+  );
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <div className="flex items-center w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2 text-xs focus-within:border-fuchsia-500/50 transition-colors">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+            if (allowCustom) onChange(e.target.value);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          className="w-full bg-transparent border-none outline-none text-white placeholder-white/20"
+        />
+        <ChevronDown className="w-4 h-4 text-white/30" />
+      </div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="absolute top-[calc(100%+4px)] left-0 w-full bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto custom-scrollbar"
+          >
+            {filtered.map((opt) => (
+              <div
+                key={opt}
+                onClick={() => {
+                  onChange(opt);
+                  setIsOpen(false);
+                }}
+                className="px-4 py-2.5 text-xs hover:bg-[#222] cursor-pointer text-[#ccc] hover:text-white truncate"
+              >
+                {opt}
+              </div>
+            ))}
+            {filtered.length === 0 && allowCustom && query.trim() && (
+              <div
+                onClick={() => {
+                  onChange(query);
+                  setIsOpen(false);
+                }}
+                className="px-4 py-2.5 text-xs hover:bg-[#222] cursor-pointer text-emerald-400 font-bold border-t border-[#333]"
+              >
+                + Add "{query}"
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const MultiSelect = ({
+  options,
+  selected,
+  onChange,
+  placeholder,
+  allowCustom = true,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target))
+        setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggleOpt = (val) => {
+    if (selected.includes(val)) onChange(selected.filter((i) => i !== val));
+    else onChange([...selected, val]);
+    setQuery("");
+  };
+
+  const filtered = options.filter(
+    (o) =>
+      o.toLowerCase().includes(query.toLowerCase()) && !selected.includes(o),
+  );
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <div
+        className="min-h-[40px] w-full bg-[#111] border border-white/[0.05] rounded-xl px-3 py-1.5 focus-within:border-fuchsia-500/50 transition-colors flex flex-wrap gap-2 items-center cursor-text"
+        onClick={() => setIsOpen(true)}
+      >
+        {selected.map((item) => (
+          <span
+            key={item}
+            className="px-2 py-1 bg-[#222] border border-[#333] rounded-md text-[10px] font-bold text-white flex items-center gap-1"
+          >
+            {item}{" "}
+            <X
+              className="w-3 h-3 cursor-pointer hover:text-red-400"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleOpt(item);
+              }}
+            />
+          </span>
+        ))}
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setIsOpen(true)}
+          placeholder={selected.length === 0 ? placeholder : ""}
+          className="flex-1 min-w-[80px] bg-transparent border-none outline-none text-xs text-white placeholder-white/20 py-1"
+        />
+      </div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="absolute top-[calc(100%+4px)] left-0 w-full bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto custom-scrollbar"
+          >
+            {filtered.map((opt) => (
+              <div
+                key={opt}
+                onClick={() => toggleOpt(opt)}
+                className="px-4 py-2.5 text-xs hover:bg-[#222] cursor-pointer text-[#ccc] hover:text-white truncate"
+              >
+                {opt}
+              </div>
+            ))}
+            {filtered.length === 0 && allowCustom && query.trim() && (
+              <div
+                onClick={() => toggleOpt(query)}
+                className="px-4 py-2.5 text-xs hover:bg-[#222] cursor-pointer text-emerald-400 font-bold border-t border-[#333]"
+              >
+                + Add "{query}"
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 // ============================================================================
 // MAIN ADMIN DASHBOARD
@@ -177,6 +502,8 @@ const AdminDashboard = () => {
   const [tickets, setTickets] = useState([]);
   const [reports, setReports] = useState([]);
   const [recentUsers, setRecentUsers] = useState([]);
+  const [learnVideos, setLearnVideos] = useState([]);
+  const [learnCerts, setLearnCerts] = useState([]);
 
   // — UI State —
   const [loading, setLoading] = useState(true);
@@ -184,13 +511,10 @@ const AdminDashboard = () => {
   const [lastRefresh, setLastRefresh] = useState(null);
   const [error, setError] = useState(null);
 
-  const [learnForm, setLearnForm] = useState({
-    type: "video",
-    title: "",
-    link: "",
-    category: "",
-  });
-  const [isSubmittingLearn, setIsSubmittingLearn] = useState(false);
+  // — Explorer State —
+  const [activeLearnTab, setActiveLearnTab] = useState("youtube");
+  const [isAddVideoOpen, setIsAddVideoOpen] = useState(false);
+  const [isAddCertOpen, setIsAddCertOpen] = useState(false);
 
   // ── DATA FETCHER ──────────────────────────────────────────────────────────
   const fetchAllData = useCallback(async () => {
@@ -200,7 +524,6 @@ const AdminDashboard = () => {
       weekAgo.setDate(weekAgo.getDate() - 7);
       const weekAgoIso = weekAgo.toISOString();
 
-      // ── 1. AGGREGATE STATS (getCountFromServer = minimal read cost) ──
       const [totalSnap, proSnap] = await Promise.all([
         getCountFromServer(query(collection(db, "users"))),
         getCountFromServer(
@@ -214,19 +537,13 @@ const AdminDashboard = () => {
           query(collection(db, "users"), where("createdAt", ">=", weekAgoIso)),
         );
         weeklyNewCount = weekSnap.data().count;
-      } catch (_) {
-        // createdAt index may not exist yet — fail gracefully
-      }
+      } catch (_) {}
 
       const total = totalSnap.data().count;
       const pro = proSnap.data().count;
       const essential = total - pro;
-
       setStats({ total, pro, essential, newThisWeek: weeklyNewCount });
 
-      // ── 2. VAULT ASSETS (batch read 50 users, extract vault arrays) ──
-      // Reading embedded arrays requires user doc fetches. Limit to 50 docs
-      // for dashboard preview. Full list is on /admin/users/verifyvault.
       const vaultBatch = await getDocs(
         query(collection(db, "users"), limit(50)),
       );
@@ -252,7 +569,6 @@ const AdminDashboard = () => {
       setPendingVault(pending);
       setReportedVault(reported);
 
-      // ── 3. FEEDBACK (from feedback collection, limit 5) ──
       try {
         const fbSnap = await getDocs(
           query(
@@ -266,7 +582,6 @@ const AdminDashboard = () => {
         setFeedback([]);
       }
 
-      // ── 4. SUPPORT TICKETS ──
       try {
         const tkSnap = await getDocs(
           query(
@@ -280,7 +595,6 @@ const AdminDashboard = () => {
         setTickets([]);
       }
 
-      // ── 5. USER REPORTS ──
       try {
         const rpSnap = await getDocs(
           query(
@@ -294,7 +608,6 @@ const AdminDashboard = () => {
         setReports([]);
       }
 
-      // ── 6. RECENT USERS (for activity feed) ──
       try {
         const ruSnap = await getDocs(
           query(
@@ -305,9 +618,27 @@ const AdminDashboard = () => {
         );
         setRecentUsers(ruSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (_) {
-        // fallback without ordering
         const ruSnap = await getDocs(query(collection(db, "users"), limit(8)));
         setRecentUsers(ruSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      }
+
+      // Fetch Learn Explorer Data
+      try {
+        const vidSnap = await getDocs(
+          query(collection(db, "discotive_videos"), limit(20)),
+        );
+        setLearnVideos(vidSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch (_) {
+        setLearnVideos([]);
+      }
+
+      try {
+        const certSnap = await getDocs(
+          query(collection(db, "discotive_certificates"), limit(20)),
+        );
+        setLearnCerts(certSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch (_) {
+        setLearnCerts([]);
       }
 
       setLastRefresh(new Date());
@@ -331,12 +662,429 @@ const AdminDashboard = () => {
     await fetchAllData();
     setRefreshing(false);
   };
-
-  // ── PIE DATA ──────────────────────────────────────────────────────────────
   const pieData = [
     { name: "Essential", value: stats.essential, color: "#2a2a2a" },
     { name: "Pro", value: stats.pro, color: "#f59e0b" },
   ];
+
+  // ============================================================================
+  // MODALS COMPONENTS
+  // ============================================================================
+
+  const AddVideoModal = () => {
+    const [form, setForm] = useState({ title: "", url: "" });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleUrlChange = async (e) => {
+      const url = e.target.value;
+      setForm((p) => ({ ...p, url }));
+      if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        try {
+          const res = await fetch(
+            `https://noembed.com/embed?dataType=json&url=${url}`,
+          );
+          const data = await res.json();
+          if (data.title) setForm((p) => ({ ...p, title: data.title }));
+        } catch (err) {
+          console.error("Could not fetch YouTube title");
+        }
+      }
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      try {
+        const suffix = Math.floor(100000 + Math.random() * 900000);
+        await addDoc(collection(db, "discotive_videos"), {
+          title: form.title,
+          url: form.url,
+          type: "video",
+          learnId: `discotive_video_${suffix}`,
+          createdAt: serverTimestamp(),
+        });
+        setIsAddVideoOpen(false);
+        handleRefresh();
+      } catch (err) {
+        console.error(err);
+      }
+      setIsSubmitting(false);
+    };
+
+    if (!isAddVideoOpen) return null;
+    return createPortal(
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md bg-[#0a0a0c] border border-white/[0.08] rounded-2xl p-6 shadow-2xl"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-black text-white">Add YouTube Video</h3>
+            <button
+              onClick={() => setIsAddVideoOpen(false)}
+              className="text-white/40 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                Video Link (YouTube) *
+              </label>
+              <input
+                required
+                value={form.url}
+                onChange={handleUrlChange}
+                placeholder="Paste YouTube URL here..."
+                className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-sky-500/50"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                Video Name *
+              </label>
+              <input
+                required
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="Extracted automatically..."
+                className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-sky-500/50"
+              />
+            </div>
+            <button
+              disabled={isSubmitting}
+              type="submit"
+              className="w-full py-3 bg-sky-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-sky-400 disabled:opacity-50 transition-colors"
+            >
+              {isSubmitting ? "Deploying..." : "Inject to Video DB"}
+            </button>
+          </form>
+        </motion.div>
+      </div>,
+      document.body,
+    );
+  };
+
+  const AddCertificateModal = () => {
+    const [form, setForm] = useState({
+      title: "",
+      link: "",
+      provider: "",
+      strength: "",
+      tags: [],
+      topic: [],
+      domain: [],
+      niche: [],
+      target: "",
+      cost: "",
+      resources: [""],
+      description: "",
+      notes: "",
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      try {
+        const suffix = Math.floor(100000 + Math.random() * 900000);
+        const payload = {
+          ...form,
+          resources: form.resources.filter((r) => r.trim() !== ""),
+          learnId: `discotive_certificate_${suffix}`,
+          createdAt: serverTimestamp(),
+        };
+        await addDoc(collection(db, "discotive_certificates"), payload);
+        setIsAddCertOpen(false);
+        handleRefresh();
+      } catch (err) {
+        console.error(err);
+      }
+      setIsSubmitting(false);
+    };
+
+    if (!isAddCertOpen) return null;
+    return createPortal(
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-2xl max-h-[90vh] flex flex-col bg-[#0a0a0c] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
+        >
+          <div className="flex items-center justify-between p-6 border-b border-white/[0.05] shrink-0">
+            <h3 className="text-sm font-black text-white">
+              Add Certificate Blueprint
+            </h3>
+            <button
+              onClick={() => setIsAddCertOpen(false)}
+              className="text-white/40 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            <form id="certForm" onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Certificate Name *
+                  </label>
+                  <input
+                    required
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm({ ...form, title: e.target.value })
+                    }
+                    className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Link *
+                  </label>
+                  <input
+                    required
+                    type="url"
+                    value={form.link}
+                    onChange={(e) => setForm({ ...form, link: e.target.value })}
+                    className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Provider Institution *
+                  </label>
+                  <input
+                    required
+                    value={form.provider}
+                    onChange={(e) =>
+                      setForm({ ...form, provider: e.target.value })
+                    }
+                    className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Strength *
+                  </label>
+                  <select
+                    required
+                    value={form.strength}
+                    onChange={(e) =>
+                      setForm({ ...form, strength: e.target.value })
+                    }
+                    className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                  >
+                    <option value="" disabled>
+                      Select strength
+                    </option>
+                    <option value="Weak">Weak</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Strong">Strong</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Tags
+                  </label>
+                  <MultiSelect
+                    options={RAW_SKILLS}
+                    selected={form.tags}
+                    onChange={(v) => setForm({ ...form, tags: v })}
+                    placeholder="Add tags..."
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Topics
+                  </label>
+                  <MultiSelect
+                    options={RAW_SKILLS}
+                    selected={form.topic}
+                    onChange={(v) => setForm({ ...form, topic: v })}
+                    placeholder="Add topics..."
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Domain
+                  </label>
+                  <MultiSelect
+                    options={MACRO_DOMAINS}
+                    selected={form.domain}
+                    onChange={(v) => setForm({ ...form, domain: v })}
+                    placeholder="Add domains..."
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Niche
+                  </label>
+                  <MultiSelect
+                    options={MICRO_NICHES}
+                    selected={form.niche}
+                    onChange={(v) => setForm({ ...form, niche: v })}
+                    placeholder="Add niches..."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Target Audience
+                  </label>
+                  <select
+                    value={form.target}
+                    onChange={(e) =>
+                      setForm({ ...form, target: e.target.value })
+                    }
+                    className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                  >
+                    <option value="">Select target...</option>
+                    <option value="Students">Students</option>
+                    <option value="Professionals">Professionals</option>
+                    <option value="All">All</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1.5">
+                    Cost Model
+                  </label>
+                  <select
+                    value={form.cost}
+                    onChange={(e) => setForm({ ...form, cost: e.target.value })}
+                    className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                  >
+                    <option value="">Select cost...</option>
+                    <option value="Free">Free</option>
+                    <option value="Paid">Paid</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center justify-between mb-1.5">
+                  Resources
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((p) => ({
+                        ...p,
+                        resources: [...p.resources, ""],
+                      }))
+                    }
+                    className="text-amber-500 hover:text-amber-400"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </label>
+                <div className="space-y-2">
+                  {form.resources.map((res, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        value={res}
+                        onChange={(e) => {
+                          const newRes = [...form.resources];
+                          newRes[i] = e.target.value;
+                          setForm({ ...form, resources: newRes });
+                        }}
+                        placeholder="https://"
+                        className="flex-1 bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                      />
+                      {form.resources.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newRes = form.resources.filter(
+                              (_, idx) => idx !== i,
+                            );
+                            setForm({ ...form, resources: newRes });
+                          }}
+                          className="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                    Description
+                  </label>
+                  <span
+                    className={cn(
+                      "text-[9px] font-mono",
+                      form.description.length > 950
+                        ? "text-amber-500"
+                        : "text-white/20",
+                    )}
+                  >
+                    {form.description.length}/1000
+                  </span>
+                </div>
+                <textarea
+                  maxLength={1000}
+                  rows={4}
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 resize-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                    Notes
+                  </label>
+                  <span
+                    className={cn(
+                      "text-[9px] font-mono",
+                      form.notes.length > 180
+                        ? "text-amber-500"
+                        : "text-white/20",
+                    )}
+                  >
+                    {form.notes.length}/200
+                  </span>
+                </div>
+                <textarea
+                  maxLength={200}
+                  rows={2}
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 resize-none"
+                />
+              </div>
+            </form>
+          </div>
+          <div className="p-6 border-t border-white/[0.05] shrink-0">
+            <button
+              form="certForm"
+              disabled={isSubmitting}
+              type="submit"
+              className="w-full py-3 bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-400 disabled:opacity-50 transition-colors"
+            >
+              {isSubmitting ? "Deploying..." : "Inject to Certificate DB"}
+            </button>
+          </div>
+        </motion.div>
+      </div>,
+      document.body,
+    );
+  };
 
   // ── SKELETON ──────────────────────────────────────────────────────────────
   if (loading) {
@@ -380,7 +1128,7 @@ const AdminDashboard = () => {
           <div>
             <div className="flex items-center gap-3 mb-3">
               <div className="px-3 py-1.5 rounded-full bg-[#111] border border-amber-500/20 text-[9px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />{" "}
                 Sector Omega — Live
               </div>
               <div className="px-3 py-1.5 rounded-full bg-[#111] border border-[#222] text-[9px] font-bold text-white/30 uppercase tracking-widest">
@@ -402,8 +1150,7 @@ const AdminDashboard = () => {
               to="/app"
               className="flex items-center gap-2 px-4 py-2.5 bg-[#0a0a0c] border border-white/[0.05] rounded-xl text-xs font-bold text-white/60 hover:text-white transition-colors"
             >
-              <LayoutDashboard className="w-4 h-4" />
-              User Dashboard
+              <LayoutDashboard className="w-4 h-4" /> User Dashboard
             </Link>
             <button
               onClick={handleRefresh}
@@ -412,7 +1159,7 @@ const AdminDashboard = () => {
             >
               <RefreshCw
                 className={cn("w-4 h-4", refreshing && "animate-spin")}
-              />
+              />{" "}
               {refreshing ? "Syncing..." : "Refresh"}
             </button>
           </div>
@@ -471,7 +1218,6 @@ const AdminDashboard = () => {
 
         {/* ── MAIN GRID: PIE CHART + ACTIVITY FEED ── */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
-          {/* PIE CHART — col-span 5 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -481,7 +1227,6 @@ const AdminDashboard = () => {
             <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-2 mb-6">
               <Users className="w-4 h-4 text-amber-500" /> User Distribution
             </h2>
-
             {stats.total === 0 ? (
               <EmptyState icon={Users} message="No users registered yet" />
             ) : (
@@ -508,8 +1253,6 @@ const AdminDashboard = () => {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-
-                  {/* Center Total */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="text-center">
                       <div className="text-5xl font-black text-white font-mono leading-none">
@@ -521,8 +1264,6 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Legend */}
                 <div className="flex items-center justify-center gap-8 mt-4 pt-4 border-t border-white/[0.04]">
                   <div className="flex items-center gap-2.5">
                     <div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
@@ -562,7 +1303,6 @@ const AdminDashboard = () => {
             )}
           </motion.div>
 
-          {/* RECENT SIGNUPS FEED — col-span 7 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -573,7 +1313,6 @@ const AdminDashboard = () => {
               <Activity className="w-4 h-4 text-sky-400" /> Recent Operator
               Registrations
             </h2>
-
             {recentUsers.length === 0 ? (
               <EmptyState icon={Users} message="No recent signups" />
             ) : (
@@ -590,7 +1329,6 @@ const AdminDashboard = () => {
                     user.identity?.domain ||
                     user.vision?.passion ||
                     "Uncategorized";
-
                   return (
                     <motion.div
                       key={user.id}
@@ -636,7 +1374,7 @@ const AdminDashboard = () => {
           </motion.div>
         </div>
 
-        {/* ── VAULT VERIFICATION WIDGET (Full Width, Horizontal) ── */}
+        {/* ── VAULT VERIFICATION WIDGET ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -652,13 +1390,10 @@ const AdminDashboard = () => {
               to="/app/admin/users/verifyvault"
               className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500/15 transition-all"
             >
-              Open Full Vault Manager
-              <ArrowUpRight className="w-3.5 h-3.5" />
+              Open Full Vault Manager <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* PENDING VERIFICATIONS */}
             <div className="bg-amber-500/[0.03] border border-amber-500/10 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -676,7 +1411,6 @@ const AdminDashboard = () => {
                   )}
                 </span>
               </div>
-
               {pendingVault.length === 0 ? (
                 <EmptyState
                   icon={ShieldCheck}
@@ -684,7 +1418,7 @@ const AdminDashboard = () => {
                 />
               ) : (
                 <div className="space-y-2">
-                  {pendingVault.slice(0, 4).map((asset, i) => (
+                  {pendingVault.slice(0, 4).map((asset) => (
                     <div
                       key={`${asset.userId}-${asset.id}`}
                       className="flex items-center gap-2.5 p-2.5 bg-white/[0.02] border border-white/[0.04] rounded-xl"
@@ -716,8 +1450,6 @@ const AdminDashboard = () => {
                 </div>
               )}
             </div>
-
-            {/* REPORTED ASSETS */}
             <div className="bg-red-500/[0.03] border border-red-500/10 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -733,7 +1465,6 @@ const AdminDashboard = () => {
                   )}
                 </span>
               </div>
-
               {reportedVault.length === 0 ? (
                 <EmptyState
                   icon={ShieldCheck}
@@ -741,7 +1472,7 @@ const AdminDashboard = () => {
                 />
               ) : (
                 <div className="space-y-2">
-                  {reportedVault.slice(0, 4).map((asset, i) => (
+                  {reportedVault.slice(0, 4).map((asset) => (
                     <div
                       key={`${asset.userId}-${asset.id}`}
                       className="flex items-center gap-2.5 p-2.5 bg-white/[0.02] border border-red-500/10 rounded-xl"
@@ -776,119 +1507,173 @@ const AdminDashboard = () => {
           </div>
         </motion.div>
 
+        {/* ── HORIZONTAL LEARN ENGINE EXPLORER WIDGET ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.55 }}
-          className="bg-[#0a0a0c] border border-white/[0.05] rounded-[2rem] p-6 flex flex-col md:col-span-3"
+          className="bg-[#0a0a0c] border border-white/[0.05] rounded-[2rem] flex flex-col mb-6 overflow-hidden h-[500px]"
         >
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-fuchsia-400" /> Learn Engine
-              Management
-            </h2>
-          </div>
-
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setIsSubmittingLearn(true);
-              try {
-                const suffix = Math.floor(100000 + Math.random() * 900000);
-                const isVideo = learnForm.type === "video";
-                const payload = {
-                  title: learnForm.title,
-                  url: learnForm.link,
-                  category: learnForm.category,
-                  learnId: `discotive_${isVideo ? "video" : "certificate"}_${suffix}`,
-                  createdAt: serverTimestamp(),
-                };
-
-                await addDoc(
-                  collection(
-                    db,
-                    isVideo ? "discotive_videos" : "discotive_certificates",
-                  ),
-                  payload,
-                );
-                setLearnForm({
-                  type: "video",
-                  title: "",
-                  link: "",
-                  category: "",
-                });
-                // Trigger toast success here
-              } catch (err) {
-                console.error(err);
-              }
-              setIsSubmittingLearn(false);
-            }}
-            className="flex-1 flex flex-col gap-3"
-          >
-            <div className="flex bg-[#111] p-1 rounded-xl border border-white/[0.05]">
-              <button
-                type="button"
-                onClick={() => setLearnForm({ ...learnForm, type: "video" })}
-                className={cn(
-                  "flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg",
-                  learnForm.type === "video"
-                    ? "bg-white/10 text-white"
-                    : "text-white/30",
-                )}
-              >
-                Video
-              </button>
-              <button
-                type="button"
-                onClick={() => setLearnForm({ ...learnForm, type: "cert" })}
-                className={cn(
-                  "flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg",
-                  learnForm.type === "cert"
-                    ? "bg-white/10 text-white"
-                    : "text-white/30",
-                )}
-              >
-                Certificate
-              </button>
+          {/* Widget Header */}
+          <div className="h-16 flex items-center px-6 justify-between border-b border-white/[0.05] bg-[#0a0a0c]/50 backdrop-blur-xl shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#111] border border-white/[0.05] flex items-center justify-center">
+                <Database className="w-4 h-4 text-fuchsia-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white tracking-tight">
+                  Learn Engine DB
+                </h3>
+                <p className="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest">
+                  Manage Global Resources
+                </p>
+              </div>
             </div>
-
-            <input
-              required
-              value={learnForm.title}
-              onChange={(e) =>
-                setLearnForm({ ...learnForm, title: e.target.value })
-              }
-              placeholder="Material Title"
-              className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/20 outline-none focus:border-fuchsia-500/50"
-            />
-            <input
-              required
-              value={learnForm.link}
-              onChange={(e) =>
-                setLearnForm({ ...learnForm, link: e.target.value })
-              }
-              placeholder={
-                learnForm.type === "video"
-                  ? "YouTube ID (e.g., dQw4w9WgXcQ)"
-                  : "Verification URL"
-              }
-              className="w-full bg-[#111] border border-white/[0.05] rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/20 outline-none focus:border-fuchsia-500/50"
-            />
-
             <button
-              disabled={isSubmittingLearn}
-              type="submit"
-              className="w-full mt-auto py-3 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/20 text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors flex items-center justify-center gap-2"
+              onClick={() =>
+                activeLearnTab === "youtube"
+                  ? setIsAddVideoOpen(true)
+                  : setIsAddCertOpen(true)
+              }
+              className="flex items-center gap-2 px-4 py-2 bg-fuchsia-500 hover:bg-fuchsia-400 text-black text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              {isSubmittingLearn ? "Deploying..." : "Inject to Database"}
+              Add {activeLearnTab === "youtube" ? "Video" : "Certificate"}
             </button>
-          </form>
+          </div>
+
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar */}
+            <div className="w-48 bg-[#0a0a0c] border-r border-white/[0.05] p-4 flex flex-col gap-4 overflow-y-auto">
+              <div>
+                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest px-2 mb-2">
+                  Sources
+                </p>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => setActiveLearnTab("youtube")}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all",
+                      activeLearnTab === "youtube"
+                        ? "bg-[#111] border border-white/[0.08] text-white shadow-lg"
+                        : "text-white/40 hover:bg-white/[0.02] hover:text-white",
+                    )}
+                  >
+                    <VideoIcon
+                      className={cn(
+                        "w-4 h-4",
+                        activeLearnTab === "youtube"
+                          ? "text-sky-400"
+                          : "text-white/40",
+                      )}
+                    />
+                    YouTube DB
+                  </button>
+                  <button
+                    onClick={() => setActiveLearnTab("certificates")}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all",
+                      activeLearnTab === "certificates"
+                        ? "bg-[#111] border border-white/[0.08] text-white shadow-lg"
+                        : "text-white/40 hover:bg-white/[0.02] hover:text-white",
+                    )}
+                  >
+                    <Award
+                      className={cn(
+                        "w-4 h-4",
+                        activeLearnTab === "certificates"
+                          ? "text-amber-400"
+                          : "text-white/40",
+                      )}
+                    />
+                    Certificates DB
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 bg-[#050505] p-6 overflow-y-auto custom-scrollbar">
+              {activeLearnTab === "youtube" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {learnVideos.length === 0 ? (
+                    <EmptyState
+                      icon={VideoIcon}
+                      message="No videos deployed yet"
+                    />
+                  ) : (
+                    learnVideos.map((v) => (
+                      <div
+                        key={v.id}
+                        className="flex flex-col gap-3 p-3 rounded-2xl bg-[#0a0a0c] border border-white/[0.05] hover:border-white/20 transition-all"
+                      >
+                        <div className="w-full aspect-video bg-[#000] rounded-xl overflow-hidden relative border border-white/[0.05]">
+                          <img
+                            src={
+                              v.thumbnailUrl ||
+                              `https://img.youtube.com/vi/${extractYouTubeId(v.url || v.youtubeId)}/maxresdefault.jpg`
+                            }
+                            className="w-full h-full object-cover"
+                            alt={v.title}
+                          />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-white line-clamp-2 leading-tight">
+                            {v.title}
+                          </span>
+                          <span className="text-[9px] text-sky-400 font-mono mt-1 block truncate">
+                            ID: {v.learnId}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {activeLearnTab === "certificates" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {learnCerts.length === 0 ? (
+                    <EmptyState
+                      icon={Award}
+                      message="No certificates deployed yet"
+                    />
+                  ) : (
+                    learnCerts.map((cert) => (
+                      <div
+                        key={cert.id}
+                        className="flex flex-col gap-3 p-4 rounded-2xl bg-[#0a0a0c] border border-white/[0.05] hover:border-white/20 transition-all"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#111] border border-white/[0.05] flex items-center justify-center shrink-0">
+                            <Award className="w-5 h-5 text-amber-400" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4
+                              className="text-xs font-bold text-white truncate"
+                              title={cert.title}
+                            >
+                              {cert.title}
+                            </h4>
+                            <p className="text-[10px] text-white/50 truncate mt-0.5">
+                              {cert.provider}
+                            </p>
+                            <div className="mt-1.5 flex items-center gap-1 text-[8px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded w-fit border border-amber-500/20">
+                              ID: {cert.learnId}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </motion.div>
 
         {/* ── BOTTOM ROW: FEEDBACK, TICKETS, REPORTS ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* FEEDBACK */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -904,7 +1689,6 @@ const AdminDashboard = () => {
                 {feedback.length} entries
               </span>
             </div>
-
             {feedback.length === 0 ? (
               <EmptyState
                 icon={MessageSquare}
@@ -934,7 +1718,6 @@ const AdminDashboard = () => {
             )}
           </motion.div>
 
-          {/* SUPPORT TICKETS */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -949,7 +1732,6 @@ const AdminDashboard = () => {
                 {tickets.length} open
               </span>
             </div>
-
             {tickets.length === 0 ? (
               <EmptyState icon={Ticket} message="No open support tickets" />
             ) : (
@@ -986,7 +1768,6 @@ const AdminDashboard = () => {
             )}
           </motion.div>
 
-          {/* USER REPORTS */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1002,7 +1783,6 @@ const AdminDashboard = () => {
                 {reports.length} reports
               </span>
             </div>
-
             {reports.length === 0 ? (
               <EmptyState icon={Shield} message="No user reports on file" />
             ) : (
@@ -1033,6 +1813,10 @@ const AdminDashboard = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Render Modals */}
+      <AddVideoModal />
+      <AddCertificateModal />
     </div>
   );
 };
