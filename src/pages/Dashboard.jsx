@@ -232,7 +232,7 @@ const ACCENT = {
 // ═══════════════════════════════════════════════════════════════════════════════
 const Dashboard = () => {
   const uid = useId(); // stable per-render gradient id
-  const GRAD_ID = `sg_${uid.replace(/:/g, "")}`;
+  const GRAD_ID = `grad_${uid.replace(/:/g, "")}`;
 
   const { userData, loading: userLoading } = useUserData();
   const navigate = useNavigate();
@@ -1421,13 +1421,12 @@ const Dashboard = () => {
                 {/* Bars */}
                 <div className="space-y-2">
                   {ganttData.nodes.map((n) => {
-                    const pct = Math.min(
-                      100,
-                      Math.max(
-                        2,
-                        (Math.max(0, n.daysLeft) / ganttData.WINDOW) * 100,
-                      ),
-                    );
+                    const pct = n.isCompleted
+                      ? 100
+                      : Math.min(
+                          100,
+                          Math.max(2, (Math.max(0, n.daysLeft) / window) * 100),
+                        );
                     const isOverdue = n.daysLeft < 0;
                     const isUrgent = !isOverdue && n.daysLeft <= 7;
                     const a = n.isCompleted

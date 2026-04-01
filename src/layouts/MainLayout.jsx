@@ -165,7 +165,7 @@ const MainLayout = () => {
   // --- THE GHOST USER BOUNCER ---
   useEffect(() => {
     if (!loading && !userData) {
-      navigate("/");
+      navigate("/auth?step=2");
     }
   }, [loading, userData, navigate]);
 
@@ -211,7 +211,7 @@ const MainLayout = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate("/");
+      navigate("/auth?step=2");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -360,7 +360,7 @@ const MainLayout = () => {
                   Complete your profile to unlock all Career Engine modules.
                 </p>
                 <button
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/auth?step=2")}
                   className="flex items-center gap-1 text-[9px] font-black text-amber-500 hover:text-amber-400 uppercase tracking-widest transition-colors"
                 >
                   Start Onboarding <ArrowRight className="w-2.5 h-2.5" />
@@ -374,7 +374,7 @@ const MainLayout = () => {
             <div
               title="Complete Onboarding to unlock all modules"
               className="w-8 h-8 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center cursor-pointer"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/auth?step=2")}
             >
               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
             </div>
@@ -662,7 +662,7 @@ const MainLayout = () => {
                         <button
                           onClick={() => {
                             setShowProfileMenu(false);
-                            navigate("/");
+                            navigate("/auth?step=2");
                           }}
                           className="flex items-center gap-1.5 text-amber-400 text-xs font-bold hover:text-amber-300 transition-colors"
                         >
@@ -869,7 +869,7 @@ const MainLayout = () => {
 
                 {/* CTA */}
                 <button
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/auth?step=2")}
                   className="w-full py-4 bg-white text-black font-extrabold rounded-2xl hover:bg-[#e5e5e5] transition-all shadow-[0_0_40px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2 text-sm uppercase tracking-widest"
                 >
                   Complete Onboarding
@@ -907,7 +907,7 @@ const MainLayout = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/auth?step=2")}
                     className="shrink-0 px-5 py-2.5 bg-amber-500 text-black font-extrabold text-[10px] uppercase tracking-widest rounded-xl hover:bg-amber-400 transition-all shadow-[0_0_20px_rgba(245,158,11,0.25)] flex items-center gap-2"
                   >
                     Start Onboarding <ArrowRight className="w-3.5 h-3.5" />
@@ -1012,7 +1012,7 @@ const MainLayout = () => {
                   className="flex items-center gap-4 p-4 bg-amber-500/8 border border-amber-500/20 rounded-2xl cursor-pointer"
                   onClick={() => {
                     setIsMobileMenuOpen(false);
-                    navigate("/");
+                    navigate("/auth?step=2");
                   }}
                 >
                   <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-lg font-bold text-amber-500">

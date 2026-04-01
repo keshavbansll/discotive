@@ -57,3 +57,19 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+.react-flow__node {
+  transition: filter 0.15s ease;
+}
+
+.react-flow__node.selected {
+  filter: none;
+}
+
+.react-flow__edge-path {
+  cursor: pointer;
+}
+
+.react-flow__handle {
+  transition: transform 0.15s ease;
+}

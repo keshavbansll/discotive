@@ -14,17 +14,17 @@
 const H_PAD = 80; // horizontal gap between layers
 const V_PAD = 60; // vertical gap between nodes in the same layer
 
-const NODE_DIM = {
-  executionNode: { w: 420, h: 240 },
-  radarWidget: { w: 300, h: 300 },
-  assetWidget: { w: 270, h: 160 },
-  videoWidget: { w: 340, h: 260 },
-  journalNode: { w: 300, h: 200 },
-  milestoneNode: { w: 280, h: 140 },
-  connectorNode: { w: 260, h: 140 },
+export const NODE_DIM = {
+  executionNode: { w: 300, h: 180 },
+  radarWidget: { w: 280, h: 280 },
+  assetWidget: { w: 230, h: 140 },
+  videoWidget: { w: 260, h: 200 },
+  journalNode: { w: 250, h: 170 },
+  milestoneNode: { w: 200, h: 150 },
+  connectorNode: { w: 220, h: 120 },
   groupNode: { w: 400, h: 300 },
 };
-const DEFAULT_DIM = { w: 420, h: 240 };
+export const DEFAULT_DIM = { w: 300, h: 180 };
 
 /**
  * @function generateNeuralLayout

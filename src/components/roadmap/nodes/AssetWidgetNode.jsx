@@ -1,165 +1,172 @@
-import React, { memo } from "react";
-import { Handle, Position } from "reactflow";
-import { Database, Eye, ShieldAlert, Link as LinkIcon } from "lucide-react";
-import { cn } from "../../ui/BentoCard";
-import { useRoadmap } from "../../../contexts/RoadmapContext.jsx";
+import {
+  Database,
+  ShieldAlert as ShieldAlertIcon,
+  ShieldCheck as ShieldCheckIcon,
+} from "lucide-react";
+export { Database, ShieldAlertIcon, ShieldCheckIcon };
 
 export const AssetWidgetNode = memo(({ id, data, selected }) => {
-  // Now triggering the unified ExplorerModal hook
   const { openExplorerModal } = useRoadmap();
 
-  // The strict credibility check:
-  const requiresSpecificAsset = !!data.requiredLearnId;
+  const requiresSpecific = !!data.requiredLearnId;
   const isVerifiedMatch =
     data.assetId &&
     data.status === "VERIFIED" &&
-    (!requiresSpecificAsset || data.learnId === data.requiredLearnId);
+    (!requiresSpecific || data.learnId === data.requiredLearnId);
   const isMismatched =
-    data.assetId &&
-    requiresSpecificAsset &&
-    data.learnId !== data.requiredLearnId;
+    data.assetId && requiresSpecific && data.learnId !== data.requiredLearnId;
+
+  const accentColor = isVerifiedMatch
+    ? "#10b981"
+    : isMismatched
+      ? "#ef4444"
+      : "#f59e0b";
+
+  const borderColor = selected ? `${accentColor}50` : "rgba(255,255,255,0.07)";
 
   const handleAccess = (e) => {
-    // Aggressively stop React Flow from swallowing the click
     e.preventDefault();
     e.stopPropagation();
-
     if (data.url) {
       window.open(data.url, "_blank", "noopener,noreferrer");
-    } else if (openExplorerModal) {
-      // Passes 'vault_certificate' as the defaultTab to jump right to the user's vault certificates
-      openExplorerModal(id, "vault_certificate", data.requiredLearnId);
     } else {
-      console.error(
-        "[Discotive] openExplorerModal is not defined in RoadmapContext. Check your context exports.",
-      );
+      openExplorerModal?.(id, "vault_certificate", data.requiredLearnId);
     }
   };
 
-  const bc = selected
-    ? "#10b981"
+  const statusLabel = !data.assetId
+    ? "Unlinked"
     : isVerifiedMatch
-      ? "rgba(16,185,129,0.5)"
+      ? "Verified"
       : isMismatched
-        ? "rgba(239,68,68,0.5)"
-        : "rgba(255,255,255,0.05)";
-  const bs = selected
-    ? "0 0 40px rgba(16,185,129,0.2)"
-    : isVerifiedMatch
-      ? "0 0 20px rgba(16,185,129,0.1)"
-      : "0 20px 40px rgba(0,0,0,0.4)";
+        ? "ID Mismatch"
+        : "Pending Audit";
 
   return (
     <div
-      className="w-[280px] bg-[#0a0a0c]/95 backdrop-blur-2xl rounded-[1.5rem] p-5 relative transition-all duration-300 border"
+      className="relative flex flex-col overflow-hidden transition-all duration-200"
       style={{
-        borderColor: bc,
-        boxShadow: bs,
-        transform: selected ? "scale(1.04)" : "scale(1)",
+        width: 230,
+        borderRadius: 12,
+        background: "#0d0d12",
+        border: `1px solid ${borderColor}`,
+        boxShadow: selected
+          ? "0 4px 20px rgba(0,0,0,0.75)"
+          : "0 1px 6px rgba(0,0,0,0.5)",
+        transform: selected ? "scale(1.012)" : "scale(1)",
       }}
     >
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-3 !h-3 !bg-[#111] !border-2 !border-emerald-500"
+        style={{ ...HANDLE_S, borderColor: `${accentColor}60` }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-3 !h-3 !bg-[#111] !border-2 !border-emerald-500"
+        style={{ ...HANDLE_S, borderColor: `${accentColor}60` }}
       />
 
-      <div className="flex items-start gap-3.5">
-        <div
-          className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border",
-            isVerifiedMatch
-              ? "bg-emerald-500/10 border-emerald-500/30"
-              : isMismatched
-                ? "bg-red-500/10 border-red-500/30"
-                : "bg-[#111] border-white/[0.05]",
-          )}
-        >
-          {isMismatched ? (
-            <ShieldAlert className="w-5 h-5 text-red-500" />
-          ) : (
-            <Database
-              className={cn(
-                "w-5 h-5",
-                isVerifiedMatch ? "text-emerald-400" : "text-white/40",
-              )}
-            />
-          )}
-        </div>
+      {/* Accent bar */}
+      <div
+        style={{
+          height: 2,
+          background: accentColor,
+          opacity: selected ? 0.9 : 0.55,
+        }}
+      />
 
-        <div className="min-w-0 flex-1">
-          <h4 className="text-xs font-black text-white mb-1 leading-tight truncate">
-            {data.label || "Awaiting Verification"}
-          </h4>
+      <div style={{ padding: "10px 12px 12px" }}>
+        {/* Icon + status */}
+        <div className="flex items-start gap-2.5 mb-3">
+          <div
+            className="flex items-center justify-center shrink-0"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: `${accentColor}12`,
+              border: `1px solid ${accentColor}25`,
+            }}
+          >
+            {isMismatched ? (
+              <ShieldAlertIcon
+                style={{ width: 15, height: 15, color: accentColor }}
+              />
+            ) : (
+              <Database
+                style={{
+                  width: 15,
+                  height: 15,
+                  color: isVerifiedMatch ? "#10b981" : "rgba(255,255,255,0.35)",
+                }}
+              />
+            )}
+          </div>
 
-          <div className="flex flex-col gap-1 mt-2">
-            {requiresSpecificAsset && (
-              <p className="text-[8px] font-mono text-white/40 bg-white/5 px-1.5 py-0.5 rounded truncate">
+          <div className="min-w-0 flex-1">
+            <p
+              className="font-bold leading-snug"
+              style={{ fontSize: 12, color: "rgba(255,255,255,0.88)" }}
+            >
+              {data.label || "Vault Target"}
+            </p>
+
+            {requiresSpecific && (
+              <p
+                className="font-mono truncate mt-0.5"
+                style={{ fontSize: 8, color: "rgba(255,255,255,0.25)" }}
+              >
                 REQ: {data.requiredLearnId}
               </p>
             )}
-            <div className="flex items-center gap-1.5 mt-1">
+
+            <div className="flex items-center gap-1 mt-1">
               <div
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full animate-pulse",
-                  isVerifiedMatch
-                    ? "bg-emerald-500"
-                    : isMismatched
-                      ? "bg-red-500"
-                      : data.assetId
-                        ? "bg-amber-500"
-                        : "bg-white/20",
-                )}
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: "50%",
+                  background: accentColor,
+                  flexShrink: 0,
+                }}
               />
               <span
-                className={cn(
-                  "text-[9px] font-black uppercase tracking-widest",
-                  isVerifiedMatch
-                    ? "text-emerald-400"
-                    : isMismatched
-                      ? "text-red-500"
-                      : data.assetId
-                        ? "text-amber-500"
-                        : "text-white/40",
-                )}
+                className="font-black uppercase tracking-widest"
+                style={{ fontSize: 8, color: `${accentColor}80` }}
               >
-                {!data.assetId
-                  ? "UNLINKED"
-                  : isVerifiedMatch
-                    ? "PoW VERIFIED"
-                    : isMismatched
-                      ? "ID MISMATCH"
-                      : "PENDING AUDIT"}
+                {statusLabel}
               </span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-5 w-full">
-        {/* Only Sync/Inspect button remains, using onPointerDown to bypass React Flow interception */}
+        {/* Action button */}
         <button
           onClick={handleAccess}
           onPointerDown={(e) => e.stopPropagation()}
-          className={cn(
-            "nodrag w-full py-2.5 border text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,0,0,0.2)] hover:shadow-none",
-            data.assetId
-              ? "border-white/10 bg-[#111] text-white hover:bg-white/10"
-              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
-          )}
+          className="nodrag pointer-events-auto w-full flex items-center justify-center gap-1.5 rounded-lg transition-all"
+          style={{
+            padding: "6px 10px",
+            fontSize: 9,
+            fontWeight: 800,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            background: data.assetId
+              ? "rgba(255,255,255,0.04)"
+              : `${accentColor}15`,
+            border: `1px solid ${data.assetId ? "rgba(255,255,255,0.07)" : `${accentColor}30`}`,
+            color: data.assetId ? "rgba(255,255,255,0.5)" : accentColor,
+            cursor: "pointer",
+          }}
         >
           {data.assetId ? (
             <>
-              <Eye className="w-3.5 h-3.5" /> Inspect Linked Asset
+              <Eye style={{ width: 10, height: 10 }} /> View Asset
             </>
           ) : (
             <>
-              <LinkIcon className="w-3.5 h-3.5" /> Sync Vault
+              <LinkIcon style={{ width: 10, height: 10 }} /> Sync Vault
             </>
           )}
         </button>
@@ -167,5 +174,4 @@ export const AssetWidgetNode = memo(({ id, data, selected }) => {
     </div>
   );
 });
-
 AssetWidgetNode.displayName = "AssetWidgetNode";

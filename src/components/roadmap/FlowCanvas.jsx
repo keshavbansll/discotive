@@ -285,7 +285,7 @@ export const FlowCanvas = ({
           {
             id,
             type: "executionNode",
-            position: { x: cx - 210, y: cy - 100 },
+            position: { x: cx - 150, y: cy - 90 },
             data: {
               title: "New Protocol",
               subtitle: "",
@@ -548,7 +548,7 @@ export const FlowCanvas = ({
           }}
           aria-label="Generate AI execution map"
           title="Generate AI execution map (Wand)"
-          className="relative w-10 h-10 bg-[#080808]/95 backdrop-blur-xl border border-[#1a1a1a] rounded-full text-[#888] hover:text-white hover:border-amber-500/40 hover:bg-amber-500/8 transition-all shadow-2xl flex items-center justify-center focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+          className="relative w-9 h-9 bg-[#0d0d12] border border-white/[0.08] rounded-xl text-[#888] hover:text-white hover:border-amber-500/40 hover:bg-amber-500/8 transition-all shadow-2xl flex items-center justify-center focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
         >
           <Wand2 className="w-4 h-4" />
         </button>
@@ -647,7 +647,7 @@ export const FlowCanvas = ({
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Find node…"
             aria-label="Search nodes"
-            className="w-36 bg-[#080808]/95 backdrop-blur-xl border border-[#1a1a1a] text-white pl-8 pr-3 py-2 rounded-full focus:outline-none focus:border-amber-500/40 text-xs placeholder:text-[#444] transition-all focus:w-48 focus-visible:ring-1 focus-visible:ring-amber-500"
+            className="w-24 md:w-36 bg-[#080808]/95 backdrop-blur-xl border border-[#1a1a1a] text-white pl-8 pr-3 py-2 rounded-full focus:outline-none focus:border-amber-500/40 text-xs placeholder:text-[#444] transition-all focus:w-32 md:focus:w-48 focus-visible:ring-1 focus-visible:ring-amber-500"
           />
           {searchQ && (
             <button
@@ -800,15 +800,15 @@ export const FlowCanvas = ({
         className="bg-[#030303]"
       >
         <Background
-          variant="dots"
-          color="#1a1a1a"
-          gap={20}
-          size={1}
-          style={{ backgroundColor: "#030303" }}
+          variant="lines"
+          color="rgba(255,255,255,0.04)"
+          gap={32}
+          lineWidth={0.5}
+          style={{ backgroundColor: "#07070b" }}
         />
         <Controls
           showInteractive={false}
-          className="!bg-transparent !border-none shadow-2xl [&_.react-flow__controls-button]:bg-[#080808] [&_.react-flow__controls-button]:border-[#1e1e1e] [&_.react-flow__controls-button]:fill-[#666] rounded-xl border border-[#1e1e1e] overflow-hidden z-30 hidden md:flex"
+          className="!bg-transparent !border-none [&_.react-flow__controls-button]:bg-[#0d0d12] [&_.react-flow__controls-button]:border-white/[0.07] [&_.react-flow__controls-button]:fill-[rgba(255,255,255,0.4)] [&_.react-flow__controls-button:hover]:bg-[#13131a] rounded-xl border border-white/[0.06] overflow-hidden z-30 hidden md:flex"
         />
         {showMini && (
           <MiniMap

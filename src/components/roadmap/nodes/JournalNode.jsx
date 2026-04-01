@@ -1,82 +1,129 @@
-/**
- * @fileoverview JournalNode — Inline execution log entry node
- */
-import React, { memo } from "react";
-import { Handle, Position } from "reactflow";
 import { BookOpen, PenLine } from "lucide-react";
 
 export const JournalNode = memo(({ id, data, selected }) => {
-  const bc = selected ? "#8b5cf6" : "#1e1e1e";
-  const bs = selected
-    ? "0 0 40px rgba(139,92,246,0.2), 0 20px 40px rgba(0,0,0,0.6)"
-    : "0 20px 40px rgba(0,0,0,0.4)";
+  const borderColor = selected
+    ? "rgba(139,92,246,0.5)"
+    : "rgba(255,255,255,0.07)";
+
   return (
     <div
-      className="w-[320px] bg-[#0a0a0c]/95 backdrop-blur-2xl border rounded-[1.5rem] p-5 relative transition-all duration-300"
+      className="relative flex flex-col overflow-hidden transition-all duration-200"
       style={{
-        borderColor: bc,
-        boxShadow: bs,
-        transform: selected ? "scale(1.03)" : "scale(1)",
+        width: 250,
+        borderRadius: 12,
+        background: "#0d0d12",
+        border: `1px solid ${borderColor}`,
+        boxShadow: selected
+          ? "0 4px 20px rgba(0,0,0,0.75)"
+          : "0 1px 6px rgba(0,0,0,0.5)",
+        transform: selected ? "scale(1.012)" : "scale(1)",
       }}
       role="article"
-      aria-label={`Journal node${data.date ? ` for ${data.date}` : ""}`}
+      aria-label={`Journal${data.date ? ` — ${data.date}` : ""}`}
     >
       <Handle
         type="target"
         position={Position.Left}
         id="left"
-        className="!w-4 !h-4 !bg-[#111] !border-2 !border-violet-500 relative before:absolute before:-inset-6 before:content-['']"
+        style={{ ...HANDLE_S, borderColor: "rgba(139,92,246,0.5)" }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="right"
-        className="!w-4 !h-4 !bg-[#111] !border-2 !border-violet-500 relative before:absolute before:-inset-6 before:content-['']"
+        style={{ ...HANDLE_S, borderColor: "rgba(139,92,246,0.5)" }}
       />
 
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-8 h-8 bg-violet-500/10 border border-violet-500/20 rounded-lg flex items-center justify-center">
-          <BookOpen className="w-4 h-4 text-violet-400" />
-        </div>
-        <div>
-          <h4 className="text-[10px] font-black text-white uppercase tracking-widest">
-            Execution Log
-          </h4>
-          {data.date && (
-            <p className="text-[9px] text-[#555] font-bold">
-              {new Date(data.date).toLocaleDateString([], {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </p>
-          )}
-        </div>
-      </div>
+      {/* Accent bar */}
+      <div
+        style={{
+          height: 2,
+          background: "#8b5cf6",
+          opacity: selected ? 0.9 : 0.5,
+        }}
+      />
 
-      {data.entry ? (
-        <p className="text-xs text-[#888] leading-relaxed line-clamp-4 font-medium">
-          {data.entry}
-        </p>
-      ) : (
-        <div className="border border-dashed border-[#2a2a2a] rounded-xl p-4 text-center">
-          <PenLine
-            className="w-4 h-4 text-[#444] mx-auto mb-1.5"
-            aria-hidden="true"
-          />
-          <p className="text-[9px] font-bold text-[#555] uppercase tracking-widest">
-            No entry recorded
+      <div style={{ padding: "10px 12px 12px" }}>
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-2.5">
+          <div
+            className="flex items-center justify-center"
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 6,
+              background: "rgba(139,92,246,0.1)",
+              border: "1px solid rgba(139,92,246,0.2)",
+              flexShrink: 0,
+            }}
+          >
+            <BookOpen style={{ width: 12, height: 12, color: "#8b5cf6" }} />
+          </div>
+          <div>
+            <p
+              className="font-black uppercase tracking-widest"
+              style={{ fontSize: 9, color: "rgba(255,255,255,0.6)" }}
+            >
+              Execution Log
+            </p>
+            {data.date && (
+              <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)" }}>
+                {new Date(data.date).toLocaleDateString([], {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Entry */}
+        {data.entry ? (
+          <p
+            className="leading-relaxed line-clamp-4"
+            style={{ fontSize: 11, color: "rgba(255,255,255,0.50)" }}
+          >
+            {data.entry}
           </p>
-        </div>
-      )}
-      {data.mood && (
-        <div className="mt-3 flex items-center gap-1.5">
-          <span className="text-[9px] font-bold text-[#555] uppercase tracking-widest">
-            State:
-          </span>
-          <span className="text-xs">{data.mood}</span>
-        </div>
-      )}
+        ) : (
+          <div
+            className="flex flex-col items-center justify-center gap-1.5 py-3"
+            style={{
+              border: "1px dashed rgba(255,255,255,0.08)",
+              borderRadius: 8,
+            }}
+          >
+            <PenLine
+              style={{ width: 14, height: 14, color: "rgba(255,255,255,0.2)" }}
+            />
+            <p
+              className="font-bold uppercase tracking-widest"
+              style={{ fontSize: 8, color: "rgba(255,255,255,0.2)" }}
+            >
+              No entry recorded
+            </p>
+          </div>
+        )}
+
+        {data.mood && (
+          <div
+            className="flex items-center gap-1.5 mt-2.5 pt-2"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+          >
+            <span
+              style={{
+                fontSize: 9,
+                color: "rgba(255,255,255,0.25)",
+                fontWeight: 600,
+              }}
+            >
+              State:
+            </span>
+            <span style={{ fontSize: 11 }}>{data.mood}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 });
