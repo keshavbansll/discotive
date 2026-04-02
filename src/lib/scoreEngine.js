@@ -96,7 +96,7 @@ export const processDailyConsistency = async (userId) => {
     let newStreak = data.discotiveScore?.streak || 0;
 
     if (!lastLogin) {
-      pointChange = 50;
+      pointChange = 70;
       reason = "OS Initialization";
       newStreak = 1;
     } else {

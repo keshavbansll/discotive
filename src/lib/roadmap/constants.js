@@ -11,7 +11,84 @@ export const IDB_STORE = "execution_maps";
 
 export const TIER_LIMITS = { free: 20, pro: 100, enterprise: Infinity };
 
-/** 8-colour accent system. Primary is the exact CSS hex value. */
+// ═══════════════════════════════════════════════════════════════════════════════
+// NEW: MAP GENERATION LIMITS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * MAP_LIMITS defines every numeric boundary for the roadmap system.
+ *
+ * auto_nodes:       max execution nodes AI can generate
+ * manual_nodes:     max additional nodes user can add manually
+ * total_nodes:      auto + manual combined cap
+ * regen_cooldown_days:   days between full map regenerations
+ * expand_cooldown_days:  days between map expansion (continuation)
+ * map_duration_days:     how many days forward the AI maps
+ * expand_mcq_count:      number of MCQ questions in expansion flow
+ * expand_text_count:     number of free-text questions in expansion flow
+ */
+export const MAP_LIMITS = Object.freeze({
+  free: {
+    auto_nodes: 10,
+    manual_nodes: 5,
+    total_nodes: 15, // auto + manual
+    regen_cooldown_days: 30,
+    expand_cooldown_days: 30,
+    map_duration_days: 30,
+    expand_mcq_count: 3,
+    expand_text_count: 1,
+  },
+  pro: {
+    auto_nodes: 25,
+    manual_nodes: 10,
+    total_nodes: 35,
+    regen_cooldown_days: 14,
+    expand_cooldown_days: 14,
+    map_duration_days: 30,
+    expand_mcq_count: 3,
+    expand_text_count: 1,
+  },
+  enterprise: {
+    auto_nodes: 50,
+    manual_nodes: 20,
+    total_nodes: 70,
+    regen_cooldown_days: 7,
+    expand_cooldown_days: 7,
+    map_duration_days: 30,
+    expand_mcq_count: 3,
+    expand_text_count: 1,
+  },
+});
+
+/**
+ * Returns the MAP_LIMITS bucket for a given tier string.
+ * Accepts "free", "ESSENTIAL", "pro", "PRO", "enterprise", "ENTERPRISE".
+ */
+export const getMapLimits = (tier = "free") => {
+  const t = String(tier).toLowerCase();
+  if (t === "pro" || t === "PRO") return MAP_LIMITS.pro;
+  if (t === "enterprise" || t === "ENTERPRISE") return MAP_LIMITS.enterprise;
+  return MAP_LIMITS.free;
+};
+
+// ─── Node types that count toward the AI auto-generation cap ─────────────────
+// AssetWidgetNode and VideoWidgetNode are EXCLUDED from the cap.
+export const CAPPED_NODE_TYPES = new Set([
+  "executionNode",
+  "milestoneNode",
+  "journalNode",
+  "connectorNode",
+  "radarWidget",
+  "groupNode",
+]);
+
+// ─── Node types never counted against any cap ─────────────────────────────────
+export const UNCAPPED_NODE_TYPES = new Set(["assetWidget", "videoWidget"]);
+
+// ─── The virtual "expand" node type (never saved to Firestore) ────────────────
+export const EXPAND_NODE_TYPE = "expandTrigger";
+
+// ─── NODE_ACCENT_PALETTE (unchanged) ─────────────────────────────────────────
 export const NODE_ACCENT_PALETTE = {
   amber: {
     primary: "#f59e0b",
