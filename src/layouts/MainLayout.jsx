@@ -385,7 +385,7 @@ const MainLayout = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-[#030303] overflow-hidden text-white selection:bg-white selection:text-black">
+    <div className="flex h-[100ddvh] bg-[#030303] overflow-hidden text-white selection:bg-white selection:text-black w-full fixed inset-0">
       {/* ========================================================= */}
       {/* DESKTOP SIDEBAR (Strict z-[100] to overlay content)       */}
       {/* ========================================================= */}
@@ -540,7 +540,8 @@ const MainLayout = () => {
       {/* ========================================================= */}
       <div className="flex-1 flex flex-col h-full min-w-0 relative z-10">
         {/* TOPBAR (Strict z-[90] to sit above pages but below dropdowns) */}
-        <header className="h-16 md:h-20 bg-[#030303]/80 backdrop-blur-xl border-b border-[#222] flex items-center justify-between px-4 md:px-8 shrink-0 sticky top-0 z-[90]">
+        <header className="safe-area-pt h-[calc(4rem+env(safe-area-inset-top))] md:h-[calc(5rem+env(safe-area-inset-top))] bg-[#030303]/80 backdrop-blur-xl border-b border-[#222] flex items-center justify-between px-4 md:px-8 shrink-0 sticky top-0 z-[90]">
+          {" "}
           <div className="flex items-center gap-4">
             <span className="md:hidden font-extrabold text-xl tracking-tight text-white">
               DISCOTIVE
@@ -569,7 +570,6 @@ const MainLayout = () => {
               </button>
             )}
           </div>
-
           <div className="flex items-center gap-3 md:gap-5">
             {/* NOTIFICATIONS DROPDOWN */}
             <div className="relative" ref={notifMenuRef}>
@@ -596,7 +596,7 @@ const MainLayout = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-3 w-[320px] md:w-[380px] bg-[#0a0a0a] border border-[#222] rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.9)] overflow-hidden z-[120] flex flex-col max-h-[80vh]"
+                    className="absolute right-0 top-full mt-3 w-[320px] md:w-[380px] bg-[#0a0a0a] border border-[#222] rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.9)] overflow-hidden z-[120] flex flex-col max-h-[80dvh]"
                   >
                     <div className="flex items-center justify-between p-4 border-b border-[#222] bg-[#050505] shrink-0">
                       <h3 className="font-extrabold text-white text-sm md:text-base">
@@ -1036,7 +1036,7 @@ const MainLayout = () => {
       {/* ========================================================= */}
       {/* MOBILE BOTTOM NAVIGATION BAR (Strictly 5 Icons)           */}
       {/* ========================================================= */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#050505]/95 backdrop-blur-2xl border-t border-[#222] z-[100] flex items-center justify-around px-2 safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#050505]/95 backdrop-blur-2xl border-t border-[#222] z-[100] flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)] pt-1 min-h-[calc(4rem+env(safe-area-inset-bottom))]">
         {[
           { icon: LayoutDashboard, path: "/app", label: "Dashboard" },
           { icon: Target, path: "/app/roadmap", label: "Roadmap" },
@@ -1052,12 +1052,12 @@ const MainLayout = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center w-14 h-full gap-1 transition-colors relative",
+                "flex flex-col items-center justify-center w-14 h-full gap-1 transition-all active:scale-90 duration-150 relative", // <-- Added active:scale-90
                 isActive
                   ? "text-white"
                   : isMobileItemLocked
                     ? "text-[#444]"
-                    : "text-[#666] hover:text-[#aaa]",
+                    : "text-[#666] active:text-[#aaa]", // <-- Changed hover to active
               )}
             >
               {isActive && (

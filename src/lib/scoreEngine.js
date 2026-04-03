@@ -1,6 +1,7 @@
 import {
   doc,
   getDoc,
+  setDoc,
   updateDoc,
   increment,
   arrayUnion,
@@ -9,6 +10,29 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+
+/**
+ * MAANG-Grade Time Enforcement
+ * Centralized single source of truth for IST calendar dates.
+ */
+const getISTDateStrings = () => {
+  const options = {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  };
+  const formatter = new Intl.DateTimeFormat("en-CA", options);
+
+  const now = new Date();
+  const todayStr = formatter.format(now);
+
+  // Safe 24-hour subtraction (India does not observe DST)
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayStr = formatter.format(yesterday);
+
+  return { todayStr, monthStr: todayStr.substring(0, 7), yesterdayStr };
+};
 
 /**
  * @function mutateScore
@@ -23,11 +47,15 @@ import { db } from "../firebase";
  * daily login snapshots. Reads current score for the history entry
  * via the post-increment value approximation (increment + last known).
  */
-export const mutateScore = async (userId, amount, reason = "Task Update") => {
+export const mutateScore = async (
+  userId,
+  amount,
+  reason = "Task Update",
+  silent = false, // FIX: Added missing parameter
+) => {
   if (!userId || amount === 0) return;
 
   const userRef = doc(db, "users", userId);
-  // Separate subcollection for the 24H granular log
   const logRef = doc(collection(userRef, "score_log"));
 
   try {
@@ -43,31 +71,32 @@ export const mutateScore = async (userId, amount, reason = "Task Update") => {
 
       if (actualChange === 0 && amount < 0) return;
 
-      // Calculate time keys
+      // FIX: Synchronized to IST
+      const { todayStr, monthStr } = getISTDateStrings();
       const now = new Date();
-      const todayStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
-      const monthStr = todayStr.substring(0, 7); // YYYY-MM
-
-      // Calculate Expiration for TTL (24 hours from now)
       const expireAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-      // 1. Update primary doc with current score AND aggregate maps
       transaction.update(userRef, {
         "discotiveScore.current": newScore,
-        [`daily_scores.${todayStr}`]: newScore, // Overwrites with latest today
-        [`monthly_scores.${monthStr}`]: newScore, // Overwrites with latest this month
+        "discotiveScore.lastAmount": actualChange, // FIX: Synced meta
+        "discotiveScore.lastReason": reason, // FIX: Synced meta
+        "discotiveScore.lastUpdatedAt": now.toISOString(), // FIX: Synced meta
+        [`daily_scores.${todayStr}`]: newScore,
+        [`monthly_scores.${monthStr}`]: newScore,
       });
 
-      // 2. Append granular log with an expireAt timestamp
-      transaction.set(logRef, {
-        score: newScore,
-        change: actualChange,
-        rawAttempt: amount,
-        reason: reason,
-        date: now.toISOString(),
-        timestamp: serverTimestamp(),
-        expireAt: expireAt, // TTL Policy will read this
-      });
+      // FIX: Implemented silent contract
+      if (!silent) {
+        transaction.set(logRef, {
+          score: newScore,
+          change: actualChange,
+          rawAttempt: amount,
+          reason: reason,
+          date: now.toISOString(), // Standardized UTC is fine for absolute chronological sorting
+          timestamp: serverTimestamp(),
+          expireAt: expireAt,
+        });
+      }
     });
 
     console.log("Score transaction committed.");
@@ -79,86 +108,83 @@ export const mutateScore = async (userId, amount, reason = "Task Update") => {
 
 export const processDailyConsistency = async (userId) => {
   if (!userId) return;
+  const userRef = doc(db, "users", userId);
+
   try {
-    const userRef = doc(db, "users", userId);
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) return;
-    const data = snap.data();
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(userRef);
+      if (!snap.exists()) return; // Abort if ghost doc isn't initialized
+      const data = snap.data();
 
-    const todayStr = new Date().toISOString().split("T")[0];
-    const monthStr = todayStr.substring(0, 7);
-    const lastLogin = data.discotiveScore?.lastLoginDate;
+      // FIX: Use centralized IST strings for BOTH today and yesterday
+      const { todayStr, monthStr, yesterdayStr } = getISTDateStrings();
+      const lastLogin = data.discotiveScore?.lastLoginDate;
 
-    if (lastLogin === todayStr) return;
+      if (lastLogin === todayStr) return;
 
-    let pointChange = 0;
-    let reason = "";
-    let newStreak = data.discotiveScore?.streak || 0;
+      let pointChange = 0;
+      let reason = "";
+      let newStreak = data.discotiveScore?.streak || 0;
 
-    if (!lastLogin) {
-      pointChange = 70;
-      reason = "OS Initialization";
-      newStreak = 1;
-    } else {
-      const daysMissed =
-        Math.floor(
-          (new Date(todayStr) - new Date(lastLogin)) / (1000 * 60 * 60 * 24),
-        ) - 1;
-      if (daysMissed === 0) {
+      if (!lastLogin) {
+        pointChange = 70;
+        reason = "OS Initialization";
+        newStreak = 1;
+      } else {
         pointChange = 10;
         reason = "Daily Execution";
-        newStreak += 1;
-      } else if (daysMissed > 0) {
-        const penalty = daysMissed * -15;
-        pointChange = penalty + 10;
-        reason = `Missed ${daysMissed} Days (${penalty}) + Login (+10)`;
-        newStreak = 1;
+        if (lastLogin === yesterdayStr) {
+          newStreak += 1;
+        } else {
+          newStreak = 1;
+        }
       }
-    }
 
-    let targetScore = Math.max(
-      0,
-      (data.discotiveScore?.current || 0) + pointChange,
-    );
-    const actualChange = targetScore - (data.discotiveScore?.current || 0);
+      // Safe against race conditions because it's inside the transaction lock
+      const currentScore = data.discotiveScore?.current || 0;
+      const targetScore = Math.max(0, currentScore + pointChange);
+      const actualChange = targetScore - currentScore;
 
-    // Prune the daily_scores map so it doesn't grow past ~30 days
-    const existingDailyScores = data.daily_scores || {};
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
+      const existingDailyScores = data.daily_scores || {};
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const updatedDailyScores = {
-      ...existingDailyScores,
-      [todayStr]: targetScore,
-    };
+      const options = {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      };
+      const formatter = new Intl.DateTimeFormat("en-CA", options);
+      const thirtyDaysAgoStr = formatter.format(thirtyDaysAgo);
 
-    // Clean up old daily records locally
-    Object.keys(updatedDailyScores).forEach((dateStr) => {
-      if (dateStr < thirtyDaysAgoStr) {
-        delete updatedDailyScores[dateStr];
+      const updatedDailyScores = {
+        ...existingDailyScores,
+        [todayStr]: targetScore,
+      };
+
+      Object.keys(updatedDailyScores).forEach((dateStr) => {
+        if (dateStr < thirtyDaysAgoStr) delete updatedDailyScores[dateStr];
+      });
+
+      const payload = {
+        "discotiveScore.current": targetScore, // FIX: Use absolute targetScore, avoid increment() mixup
+        "discotiveScore.lastLoginDate": todayStr,
+        "discotiveScore.streak": newStreak,
+        "discotiveScore.lastAmount": actualChange,
+        "discotiveScore.lastReason": reason,
+        "discotiveScore.lastUpdatedAt": new Date().toISOString(),
+        consistency_log: arrayUnion(todayStr),
+        login_history: arrayUnion(todayStr),
+        daily_scores: updatedDailyScores,
+        [`monthly_scores.${monthStr}`]: targetScore,
+      };
+
+      if (lastLogin && lastLogin !== todayStr) {
+        payload["discotiveScore.last24h"] = currentScore;
       }
+
+      transaction.update(userRef, payload);
     });
-
-    const payload = {
-      "discotiveScore.current": increment(actualChange),
-      "discotiveScore.lastLoginDate": todayStr,
-      "discotiveScore.streak": newStreak,
-      "discotiveScore.lastAmount": actualChange,
-      "discotiveScore.lastReason": reason,
-      "discotiveScore.lastUpdatedAt": new Date().toISOString(),
-      consistency_log: arrayUnion(todayStr),
-      login_history: arrayUnion(todayStr),
-      // Set the newly pruned map and the new monthly score
-      daily_scores: updatedDailyScores,
-      [`monthly_scores.${monthStr}`]: targetScore,
-    };
-
-    if (lastLogin !== todayStr) {
-      payload["discotiveScore.last24h"] = data.discotiveScore?.current || 0;
-    }
-
-    await updateDoc(userRef, payload);
   } catch (error) {
     console.error("Consistency Engine Failed:", error);
   }
@@ -267,25 +293,29 @@ export const initGhostUserScore = async (userId, displayName, email) => {
   if (!userId) return;
   try {
     const userRef = doc(db, "users", userId);
+
+    // CRITICAL: Prevent overriding an existing user's ledger
     const snap = await getDoc(userRef);
-    // Only initialize if the ghost doc doesn't already exist
     if (snap.exists()) return;
 
-    const todayStr = new Date().toISOString().split("T")[0];
-    await updateDoc(userRef, {
-      "discotiveScore.current": 0,
-      "discotiveScore.streak": 0,
-      "discotiveScore.lastLoginDate": todayStr,
-      "discotiveScore.lastAmount": 0,
-      "discotiveScore.lastReason": "Ghost Account — Onboarding Pending",
-      "discotiveScore.lastUpdatedAt": new Date().toISOString(),
-      onboardingComplete: false,
-      isGhostUser: true,
-      login_history: arrayUnion(todayStr),
-    }).catch(() => {
-      // doc may not exist yet — use setDoc instead
-    });
+    const { todayStr } = getISTDateStrings();
+
+    await setDoc(
+      userRef,
+      {
+        "discotiveScore.current": 0,
+        "discotiveScore.streak": 0,
+        "discotiveScore.lastLoginDate": todayStr,
+        "discotiveScore.lastAmount": 0,
+        "discotiveScore.lastReason": "Ghost Account — Onboarding Pending",
+        "discotiveScore.lastUpdatedAt": new Date().toISOString(),
+        onboardingComplete: false,
+        isGhostUser: true,
+        login_history: arrayUnion(todayStr),
+      },
+      { merge: true },
+    );
   } catch (err) {
-    console.warn("[ScoreEngine] Ghost init skipped:", err);
+    console.warn("[ScoreEngine] Ghost init failed:", err);
   }
 };

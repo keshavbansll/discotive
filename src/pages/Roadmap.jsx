@@ -55,7 +55,6 @@ import { FlowCanvas } from "../components/roadmap/FlowCanvas.jsx";
 import { NodeEditPanel } from "../components/roadmap/NodeEditPanel.jsx";
 import { MobileEditSheet } from "../components/roadmap/MobileEditSheet.jsx";
 import { ShortcutsPanel } from "../components/ShortcutsPanel.jsx";
-import { ConflictDialog } from "../components/roadmap/ConflictDialog.jsx";
 import { JournalModal } from "../components/roadmap/JournalModal.jsx";
 import { ExplorerModal } from "../components/roadmap/ExplorerModal.jsx";
 
@@ -136,7 +135,6 @@ const Roadmap = () => {
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [proModalReason, setProModalReason] = useState("nodes");
-  const [conflict, setConflict] = useState(null);
 
   // ── AI calibration — now OVERLAY state ────────────────────────────────────
   const [aiPhase, setAiPhase] = useState("idle"); // idle | questions | generating | done
@@ -336,24 +334,13 @@ const Roadmap = () => {
     return () => clearTimeout(saveTimerRef.current);
   }, [hasUnsavedChanges, nodes2, edges2, uid]); // eslint-disable-line
 
-  // ── beforeunload ───────────────────────────────────────────────────────────
+  // ── Cold Load (Timestamp Reconciliation Engine) ──────────────────────────────
   useEffect(() => {
-    const handler = (e) => {
-      if (!hasUnsavedChanges) return;
-      e.preventDefault();
-      e.returnValue = "You have unsaved changes. Leave anyway?";
-      handleCloudSave();
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [hasUnsavedChanges, handleCloudSave]);
-
-  // ── Cold load ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchData = async () => {
+    const bootSequence = async () => {
       if (!uid || hasLoadedRef.current) return;
       hasLoadedRef.current = true;
       setIsBooting(true);
+
       try {
         const [mapSnap, subSnap] = await Promise.all([
           getDoc(doc(db, "users", uid, "execution_map", "current")),
@@ -367,89 +354,50 @@ const Roadmap = () => {
         }
 
         const localCache = await idbGet(uid);
-        const cloudTs = mapSnap.exists() ? mapSnap.data().updatedAt || 0 : 0;
+        const cloudData = mapSnap.exists() ? mapSnap.data() : null;
+
+        const cloudTs = cloudData?.updatedAt || 0;
         const localTs = localCache?.localTs || 0;
-        const idbCloudTs = localCache?.cloudTs;
 
-        if (mapSnap.exists()) {
-          const rm = mapSnap.data();
+        // Reconciliation: Strict latest-timestamp wins
+        const useLocal = localCache?.nodes?.length > 0 && localTs > cloudTs;
+        const masterData = useLocal ? localCache : cloudData;
 
-          // Conflict detection
-          if (
-            localCache?.nodes?.length > 0 &&
-            rm.nodes?.length > 0 &&
-            localTs > cloudTs + 5000 &&
-            idbCloudTs !== cloudTs
-          ) {
-            setConflict({
-              cloudNodes: rm.nodes.length,
-              localNodes: localCache.nodes.length,
-              cloudTs,
-              localTs,
-              idbData: localCache,
-              cloudData: { nodes: rm.nodes || [], edges: rm.edges || [] },
-            });
-            setIsBooting(false);
-            return;
-          }
+        if (masterData && masterData.nodes?.length > 0) {
+          const n = masterData.nodes || [];
+          const e = masterData.edges || [];
 
-          const n = rm.nodes || [];
-          const e = rm.edges || [];
           setNodes2(n);
           setEdges2(e);
-          reset(n, e);
-          idbPut(uid, { nodes: n, edges: e }, cloudTs);
-          if (n.length > 0) {
-            hasInitializedBefore.current = true;
-            try {
-              localStorage.setItem("discotive_initialized_v6", "true");
-            } catch (_) {}
-          } else {
-            // Has a cloud doc but no nodes — show first-time splash
-            setShowFirstTimeSplash(true);
-          }
-        } else if (localCache?.nodes?.length > 0) {
-          const n = localCache.nodes;
-          const e = localCache.edges || [];
-          setNodes2(n);
-          setEdges2(e);
-          reset(n, e);
+          reset(n, e); // Seed history stack
+
           hasInitializedBefore.current = true;
-          addToast("Restored from local cache. Save to sync.", "grey");
+          try {
+            localStorage.setItem("discotive_initialized_v6", "true");
+          } catch (_) {}
+
+          // State Alignment: Ensure both local and cloud match the resolved master
+          if (useLocal) {
+            // Local is ahead: Dispatch non-blocking sync to cloud
+            handleCloudSave(n, e);
+          } else {
+            // Cloud is ahead (or cache cleared): Hydrate local IDB
+            idbPut(uid, { nodes: n, edges: e }, cloudTs);
+          }
         } else {
-          // Brand new user
+          // Zero-state deployment
           setShowFirstTimeSplash(true);
         }
       } catch (err) {
-        console.error("[Roadmap] Cold load failed:", err);
-        addToast("Load failed. Working offline.", "red");
+        console.error("[Roadmap] Boot sequence failed:", err);
+        addToast("System degradation: Operating offline.", "red");
       } finally {
         setIsBooting(false);
       }
     };
-    if (!loading) fetchData();
-  }, [uid, loading]); // eslint-disable-line
 
-  // ── Conflict resolution ────────────────────────────────────────────────────
-  const resolveConflict = useCallback(
-    (useCloud) => {
-      const data = useCloud ? conflict.cloudData : conflict.idbData;
-      const n = data.nodes || [];
-      const e = data.edges || [];
-      setNodes2(n);
-      setEdges2(e);
-      reset(n, e);
-      setConflict(null);
-      if (!useCloud) {
-        setHasUnsavedChanges(true);
-        addToast("Local version loaded. Save when ready.", "grey");
-      } else {
-        idbClear(uid);
-        addToast("Cloud version restored.", "green");
-      }
-    },
-    [conflict, reset, addToast, uid],
-  );
+    if (!loading) bootSequence();
+  }, [uid, loading]); // eslint-disable-line
 
   // ── Global keyboard shortcuts ──────────────────────────────────────────────
   useEffect(() => {
@@ -1052,13 +1000,6 @@ const Roadmap = () => {
         <ShortcutsPanel
           isOpen={isShortcutsOpen}
           onClose={() => setIsShortcutsOpen(false)}
-        />
-
-        <ConflictDialog
-          isOpen={!!conflict}
-          conflict={conflict}
-          onUseCloud={() => resolveConflict(true)}
-          onUseLocal={() => resolveConflict(false)}
         />
 
         {isJournalOpen && (

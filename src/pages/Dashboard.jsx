@@ -470,10 +470,23 @@ const Dashboard = () => {
         let sourceData = [];
 
         if (tf === "24H") {
-          // 1. Fetch from the 24H granular subcollection
-          const { getDocs, orderBy } = await import("firebase/firestore");
+          // 1. Fetch from the 24H granular subcollection safely
+          const { getDocs, query, where, orderBy } =
+            await import("firebase/firestore");
           const logRef = collection(db, "users", userData.uid, "score_log");
-          const q = query(logRef, orderBy("timestamp", "asc"));
+
+          // Strict 24-hour lookback to prevent TTL bleed
+          const cutoffIso = new Date(
+            Date.now() - 24 * 60 * 60 * 1000,
+          ).toISOString();
+
+          // Order by 'date' (ISO string), NOT 'timestamp' to prevent null-crashes on optimistic writes
+          const q = query(
+            logRef,
+            where("date", ">=", cutoffIso),
+            orderBy("date", "asc"),
+          );
+
           const snap = await getDocs(q);
           sourceData = snap.docs.map((d) => ({
             date: d.data().date,
@@ -501,17 +514,36 @@ const Dashboard = () => {
         // Apply specific cutoffs for map data
         const now = new Date();
         const cutoff = new Date(now);
+        if (tf === "24H") cutoff.setHours(now.getHours() - 24);
         if (tf === "1W") cutoff.setDate(now.getDate() - 7);
         if (tf === "1M") cutoff.setMonth(now.getMonth() - 1);
 
-        if (tf === "1W" || tf === "1M") {
+        // Enforce the cutoff for ALL timeframes except ALL
+        if (tf !== "ALL") {
           sourceData = sourceData.filter((e) => new Date(e.date) >= cutoff);
         }
 
-        // Fallback to last known points if data is entirely empty to prevent crashing
-        if (sourceData.length < 2 && tf !== "24H") {
-          const historyFallback = userData.score_history || [];
-          sourceData = historyFallback.slice(-5);
+        // 🔥 THE FIX: Pad the data if Recharts doesn't have enough points to draw a line
+        if (sourceData.length === 1) {
+          // If we only have today's data, inject a baseline point at the cutoff time
+          const baselineDate =
+            tf === "ALL"
+              ? new Date("2026-03-01").toISOString()
+              : cutoff.toISOString();
+          sourceData.unshift({
+            date: baselineDate,
+            score: tf === "24H" ? userData.discotiveScore?.last24h || 0 : 0,
+          });
+        } else if (sourceData.length === 0) {
+          // Completely empty? Draw a flat zero line so the UI doesn't crash
+          const baselineDate =
+            tf === "ALL"
+              ? new Date("2026-03-01").toISOString()
+              : cutoff.toISOString();
+          sourceData = [
+            { date: baselineDate, score: 0 },
+            { date: now.toISOString(), score: 0 },
+          ];
         }
 
         // Map to Recharts format
@@ -1057,104 +1089,108 @@ const Dashboard = () => {
             </Link>
           </motion.div>
 
-          {/* ── 3. QUICK STATS ROW (4 × 3 col on xl, 2×2 on sm) ─────────── */}
-          {[
-            {
-              label: "Score Points",
-              val: currentScore.toLocaleString(),
-              icon: Zap,
-              color: "text-amber-500",
-              bg: "bg-amber-500/10",
-              border: "border-amber-500/15",
-              sub:
-                delta > 0
-                  ? `+${delta} today`
-                  : delta < 0
-                    ? `${delta} today`
-                    : "No change today",
-              onClick: null,
-            },
-            {
-              label: "Vault Assets",
-              val: vaultCount,
-              icon: Database,
-              color: "text-emerald-400",
-              bg: "bg-emerald-500/10",
-              border: "border-emerald-500/15",
-              sub: "Verified proofs",
-              onClick: () => navigate("/app/vault"),
-            },
-            {
-              label: "Profile Views",
-              val: profileViews,
-              icon: Eye,
-              color: "text-sky-400",
-              bg: "bg-sky-500/10",
-              border: "border-sky-500/15",
-              sub: "Total impressions",
-              onClick: null,
-            },
-            {
-              label: "Active Allies",
-              val: alliesCount,
-              icon: Users,
-              color: "text-violet-400",
-              bg: "bg-violet-500/10",
-              border: "border-violet-500/15",
-              sub: "Network connections",
-              onClick: () => navigate("/app/network"),
-            },
-          ].map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <motion.div
-                key={s.label}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.12 + i * 0.04 }}
-                onClick={s.onClick || undefined}
-                className={cn(
-                  "col-span-1 xl:col-span-3 bg-[#0a0a0c] border border-white/[0.05] rounded-[1.5rem] p-5 flex flex-col justify-between shadow-lg",
-                  s.onClick &&
-                    "cursor-pointer hover:border-white/10 hover:shadow-xl transition-all group",
-                )}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div
-                    className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center border",
-                      s.bg,
-                      s.border,
-                    )}
-                  >
-                    <Icon className={cn("w-4 h-4", s.color)} />
-                  </div>
-                  {s.onClick && (
-                    <ArrowUpRight
+          {/* ── 3. QUICK STATS ROW (2x2 square on mobile, 4 in a row on xl) ─────────── */}
+          <div className="col-span-1 sm:col-span-2 xl:col-span-12 grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+            {[
+              {
+                label: "Score Points",
+                val: currentScore.toLocaleString(),
+                icon: Zap,
+                color: "text-amber-500",
+                bg: "bg-amber-500/10",
+                border: "border-amber-500/15",
+                sub:
+                  delta > 0
+                    ? `+${delta} today`
+                    : delta < 0
+                      ? `${delta} today`
+                      : "No change today",
+                onClick: null,
+              },
+              {
+                label: "Vault Assets",
+                val: vaultCount,
+                icon: Database,
+                color: "text-emerald-400",
+                bg: "bg-emerald-500/10",
+                border: "border-emerald-500/15",
+                sub: "Verified proofs",
+                onClick: () => navigate("/app/vault"),
+              },
+              {
+                label: "Profile Views",
+                val: profileViews,
+                icon: Eye,
+                color: "text-sky-400",
+                bg: "bg-sky-500/10",
+                border: "border-sky-500/15",
+                sub: "Total impressions",
+                onClick: null,
+              },
+              {
+                label: "Active Allies",
+                val: alliesCount,
+                icon: Users,
+                color: "text-violet-400",
+                bg: "bg-violet-500/10",
+                border: "border-violet-500/15",
+                sub: "Network connections",
+                onClick: () => navigate("/app/network"),
+              },
+            ].map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <motion.div
+                  key={s.label}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.12 + i * 0.04 }}
+                  onClick={s.onClick || undefined}
+                  className={cn(
+                    "aspect-square bg-[#0a0a0c] border border-white/[0.05] rounded-[1.5rem] p-4 sm:p-5 flex flex-col justify-between shadow-lg",
+                    s.onClick &&
+                      "cursor-pointer hover:border-white/10 hover:shadow-xl transition-all group",
+                  )}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div
                       className={cn(
-                        "w-4 h-4 opacity-0 group-hover:opacity-40 transition-opacity",
+                        "w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center border shrink-0",
+                        s.bg,
+                        s.border,
+                      )}
+                    >
+                      <Icon className={cn("w-4 h-4 sm:w-4 sm:h-4", s.color)} />
+                    </div>
+                    {s.onClick && (
+                      <ArrowUpRight
+                        className={cn(
+                          "w-4 h-4 opacity-0 group-hover:opacity-40 transition-opacity shrink-0",
+                          s.color,
+                        )}
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-end flex-1 min-h-0">
+                    <div
+                      className={cn(
+                        "text-2xl sm:text-3xl font-black font-mono tracking-tight truncate",
                         s.color,
                       )}
-                    />
-                  )}
-                </div>
-                <div>
-                  <div
-                    className={cn(
-                      "text-3xl font-black font-mono tracking-tight",
-                      s.color,
-                    )}
-                  >
-                    {s.val}
+                    >
+                      {s.val}
+                    </div>
+                    <p className="text-[8px] sm:text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1 line-clamp-1">
+                      {s.label}
+                    </p>
+                    <p className="text-[8px] sm:text-[9px] text-white/20 mt-0.5 line-clamp-1">
+                      {s.sub}
+                    </p>
                   </div>
-                  <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1">
-                    {s.label}
-                  </p>
-                  <p className="text-[9px] text-white/20 mt-0.5">{s.sub}</p>
-                </div>
-              </motion.div>
-            );
-          })}
+                </motion.div>
+              );
+            })}
+          </div>
 
           {/* ── 4. POSITION MATRIX PERCENTILES (12→5 col) ───────────────── */}
           <motion.div

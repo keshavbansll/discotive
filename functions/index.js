@@ -13,6 +13,9 @@ const Razorpay = require("razorpay");
 admin.initializeApp();
 const db = admin.firestore();
 
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { FieldValue } = require("firebase-admin/firestore");
+
 /**
  * GENERATE SUBSCRIPTION API (Raw HTTP / Deterministic)
  */
@@ -151,3 +154,103 @@ exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+/**
+ * @function dailyInactivitySweep (v2 API)
+ * @description Enterprise-grade CRON job that runs daily at 11:59 PM IST.
+ * Sweeps all users who haven't logged in today and deducts 10 points.
+ * Implements chunked batching to bypass Firestore's 500-write limit.
+ */
+exports.dailyInactivitySweep = onSchedule(
+  {
+    schedule: "59 23 * * *",
+    timeZone: "Asia/Kolkata",
+    timeoutSeconds: 300,
+  },
+  async (event) => {
+    // 1. MAANG-Grade Time Enforcement (Force IST calculation)
+    const options = {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    };
+    const formatter = new Intl.DateTimeFormat("en-CA", options); // en-CA yields YYYY-MM-DD
+    const todayStr = formatter.format(new Date());
+    const monthStr = todayStr.substring(0, 7);
+
+    const usersRef = db.collection("users");
+
+    // Note: Users who have never logged in (lastLoginDate is null) will NOT be caught by '<'.
+    // You must ensure onboarding sets lastLoginDate, which your initGhostUserScore currently handles.
+    const snapshot = await usersRef
+      .where("discotiveScore.lastLoginDate", "<", todayStr)
+      .where("discotiveScore.current", ">", 0)
+      .get();
+
+    if (snapshot.empty) {
+      console.log("[CRON] No inactive users found for penalty.");
+      return;
+    }
+
+    console.log(`[CRON] Initiating penalty sweep for ${snapshot.size} users.`);
+
+    // 2. Batch Limit Adjustment (Max 500 writes).
+    // Since we write 2 docs per user (User Doc + Log Doc), the safe user limit per batch is 250.
+    const USERS_PER_BATCH = 250;
+    const batches = [];
+    let currentBatch = db.batch();
+    let userCount = 0;
+
+    snapshot.docs.forEach((userDoc) => {
+      const data = userDoc.data();
+      const currentScore = data.discotiveScore?.current || 0;
+
+      const newScore = Math.max(0, currentScore - 10);
+      const actualChange = newScore - currentScore;
+      if (actualChange === 0) return;
+
+      const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Operation A: Update User Ledger
+      currentBatch.update(userDoc.ref, {
+        "discotiveScore.current": newScore,
+        "discotiveScore.streak": 0,
+        "discotiveScore.lastAmount": actualChange,
+        "discotiveScore.lastReason": "System Penalty - Daily Inactivity",
+        "discotiveScore.lastUpdatedAt": FieldValue.serverTimestamp(),
+        [`daily_scores.${todayStr}`]: newScore,
+        [`monthly_scores.${monthStr}`]: newScore,
+      });
+
+      // Operation B: Append to Immutable Audit Trail (DO NOT BYPASS THIS)
+      const logRef = userDoc.ref.collection("score_log").doc();
+      currentBatch.set(logRef, {
+        score: newScore,
+        change: actualChange,
+        rawAttempt: -10,
+        reason: "System Penalty - Daily Inactivity",
+        date: new Date().toISOString(), // Standardized UTC for log sorting
+        timestamp: FieldValue.serverTimestamp(),
+        expireAt: admin.firestore.Timestamp.fromDate(expireAt),
+      });
+
+      userCount++;
+
+      if (userCount === USERS_PER_BATCH) {
+        batches.push(currentBatch.commit());
+        currentBatch = db.batch();
+        userCount = 0;
+      }
+    });
+
+    if (userCount > 0) {
+      batches.push(currentBatch.commit());
+    }
+
+    await Promise.all(batches);
+    console.log(
+      `[CRON] Inactivity sweep completed. Applied to ${snapshot.size} users.`,
+    );
+  },
+);
