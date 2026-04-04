@@ -33,6 +33,8 @@ import AdminRoute from "./components/AdminRoute";
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const VaultVerification = lazy(() => import("./pages/admin/VaultVerification"));
 
+import SystemFailure from "./components/SystemFailure";
+
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
   if (!currentUser) return <Navigate to="/" replace />;
@@ -130,6 +132,15 @@ function App() {
                 />
               </Route>
             </Route>
+            <Route
+              path="*"
+              element={
+                <SystemFailure
+                  errorType="404_SECTOR_NOT_FOUND"
+                  errorMessage="The requested routing directory does not exist in the current execution map."
+                />
+              }
+            />
           </Routes>
         </Suspense>
       </Router>

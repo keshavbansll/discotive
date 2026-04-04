@@ -13,7 +13,7 @@
     <meta name="title" content="Discotive | Unified Career Engine" />
     <meta
       name="description"
-      content="Build your monopoly. Discotive is the algorithmic career operating system for founders, engineers, and creators. Plan execution, track momentum, and verify your proof of work."
+      content="Build your monopoly. Discotive is the algorithmic career system for founders, engineers, and creators. Plan execution, track momentum, and verify your proof of work."
     />
     <meta
       name="keywords"
@@ -54,6 +54,23 @@
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
   </head>
   <body>
+    <script>
+      window.onload = function () {
+        setTimeout(function () {
+          const root = document.getElementById("root");
+          if (!root || root.innerHTML.trim() === "") {
+            document.getElementById("native-crash-screen").style.display =
+              "flex";
+          }
+        }, 4000);
+      };
+
+      window.addEventListener("error", function (event) {
+        if (event.message && event.message.includes("Loading chunk")) {
+          window.location.reload();
+        }
+      });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script

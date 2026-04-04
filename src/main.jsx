@@ -6,14 +6,17 @@ import "./index.css";
 import App from "./App.jsx";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Analytics } from "@vercel/analytics/react";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import { registerSW } from "virtual:pwa-register";
 registerSW({ immediate: true });
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
-    <SpeedInsights />
-    <Analytics />
+    <ErrorBoundary>
+      <App />
+      <SpeedInsights />
+      <Analytics />
+    </ErrorBoundary>
   </React.StrictMode>,
 );
