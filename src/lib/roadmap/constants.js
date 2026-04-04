@@ -1,6 +1,6 @@
 /**
  * @fileoverview Discotive Roadmap — Compile-Time Constants
- * Single source of truth for palette, registry, and tier config.
+ * Single source of truth for palette, registry, tier config, and Neural DAG states.
  * Import these; never hardcode magic strings in component files.
  */
 
@@ -12,20 +12,11 @@ export const IDB_STORE = "execution_maps";
 export const TIER_LIMITS = { free: 20, pro: 100, enterprise: Infinity };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NEW: MAP GENERATION LIMITS
+// MAP GENERATION LIMITS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * MAP_LIMITS defines every numeric boundary for the roadmap system.
- *
- * auto_nodes:       max execution nodes AI can generate
- * manual_nodes:     max additional nodes user can add manually
- * total_nodes:      auto + manual combined cap
- * regen_cooldown_days:   days between full map regenerations
- * expand_cooldown_days:  days between map expansion (continuation)
- * map_duration_days:     how many days forward the AI maps
- * expand_mcq_count:      number of MCQ questions in expansion flow
- * expand_text_count:     number of free-text questions in expansion flow
  */
 export const MAP_LIMITS = Object.freeze({
   free: {
@@ -60,10 +51,6 @@ export const MAP_LIMITS = Object.freeze({
   },
 });
 
-/**
- * Returns the MAP_LIMITS bucket for a given tier string.
- * Accepts "free", "ESSENTIAL", "pro", "PRO", "enterprise", "ENTERPRISE".
- */
 export const getMapLimits = (tier = "free") => {
   const t = String(tier).toLowerCase();
   if (t === "pro" || t === "PRO") return MAP_LIMITS.pro;
@@ -71,24 +58,90 @@ export const getMapLimits = (tier = "free") => {
   return MAP_LIMITS.free;
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// NEW: NEURAL GRAPH STATE MACHINE & TAXONOMY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Strict State Machine Definitions for Graph Engine.
+ * Execution Nodes MUST strictly exist in one of these computed states.
+ */
+export const NODE_STATES = Object.freeze({
+  LOCKED: "LOCKED", // Dependencies unmet, unclickable.
+  ACTIVE: "ACTIVE", // Dependencies met, ready to click 'Begin'.
+  IN_PROGRESS: "IN_PROGRESS", // 'Begin' clicked. Minimum time-lock active.
+  VERIFYING: "VERIFYING", // Payload in queue. UI shows pulse/spinner.
+  VERIFIED_GHOST: "VERIFIED_GHOST", // Free tier artificial delay. UI looks locked.
+  VERIFIED: "VERIFIED", // Fully unlocked. Powers outbound neural edges.
+  FAILED_BACKOFF: "FAILED_BACKOFF", // Payload rejected. Exponential lock active.
+});
+
+/**
+ * Polymorphic Node Types for React Flow custom routing.
+ */
+export const GRAPH_NODE_TYPES = Object.freeze({
+  HUB: "milestoneNode", // The origin router (e.g., Phase 1)
+  EXECUTION: "executionNode", // The actionable leaf
+  COMPUTE: "computeNode", // AI Gatekeeper (sits between tasks)
+  LOGIC: "logicGate", // AND/OR convergences
+  TELEMETRY: "telemetryNode", // Attached Context/Data read-only node
+  JOURNAL: "journalNode",
+  GROUP: "groupNode",
+  CONNECTOR: "connectorNode",
+});
+
+/**
+ * Uncompromising Backoff Penalty (in minutes) for brute-forcing Gemini.
+ * Array Index = Attempt Number.
+ * e.g., 0th fail = 0m, 1st fail = 30m, 2nd fail = 240m (4h), 3rd+ = 1440m (24h)
+ */
+export const EXPONENTIAL_BACKOFF_MINUTES = Object.freeze([0, 30, 240, 1440]);
+
+/**
+ * Platform Monetization Friction
+ */
+export const VERIFICATION_FRICTION = Object.freeze({
+  free: {
+    ghostStateDelayHours: 24, // Security-level psychological delay
+    queuePriority: 2, // Background worker tier
+  },
+  pro: {
+    ghostStateDelayHours: 0, // Instant execution
+    queuePriority: 1, // Fast-lane worker tier
+  },
+  enterprise: {
+    ghostStateDelayHours: 0,
+    queuePriority: 0, // Dedicated worker tier
+  },
+});
+
 // ─── Node types that count toward the AI auto-generation cap ─────────────────
-// AssetWidgetNode and VideoWidgetNode are EXCLUDED from the cap.
 export const CAPPED_NODE_TYPES = new Set([
-  "executionNode",
-  "milestoneNode",
-  "journalNode",
-  "connectorNode",
+  GRAPH_NODE_TYPES.EXECUTION,
+  GRAPH_NODE_TYPES.HUB,
+  GRAPH_NODE_TYPES.JOURNAL,
+  GRAPH_NODE_TYPES.CONNECTOR,
+  GRAPH_NODE_TYPES.GROUP,
   "radarWidget",
-  "groupNode",
 ]);
 
 // ─── Node types never counted against any cap ─────────────────────────────────
-export const UNCAPPED_NODE_TYPES = new Set(["assetWidget", "videoWidget"]);
+// Added functional/system nodes that route logic but aren't user tasks
+export const UNCAPPED_NODE_TYPES = new Set([
+  "assetWidget",
+  "videoWidget",
+  GRAPH_NODE_TYPES.COMPUTE,
+  GRAPH_NODE_TYPES.LOGIC,
+  GRAPH_NODE_TYPES.TELEMETRY,
+]);
 
 // ─── The virtual "expand" node type (never saved to Firestore) ────────────────
 export const EXPAND_NODE_TYPE = "expandTrigger";
 
-// ─── NODE_ACCENT_PALETTE (unchanged) ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXISTING PALETTES & REGISTRIES
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export const NODE_ACCENT_PALETTE = {
   amber: {
     primary: "#f59e0b",
@@ -132,10 +185,6 @@ export const NODE_ACCENT_PALETTE = {
   },
 };
 
-/**
- * App connector registry — SVG icon paths sourced from Simple Icons (CC0).
- * Each entry has a real inline SVG path, not a two-letter placeholder.
- */
 export const APP_CONNECTORS = {
   LinkedIn: {
     color: "#0a66c2",
@@ -277,7 +326,6 @@ export const CHARACTERS = {
   },
 };
 
-/** Pre-computed CSS animation keyframe injected once into the document head. */
 export const EDGE_KEYFRAMES = `
   @keyframes dashFlow {
     to { stroke-dashoffset: -24; }
@@ -304,5 +352,4 @@ export const KEYBOARD_SHORTCUTS = [
   { keys: ["F"], description: "Toggle fullscreen canvas" },
   { keys: ["J"], description: "Toggle journal (Pro)" },
   { keys: ["Escape"], description: "Deselect / close panel" },
-  { keys: ["?"], description: "Show this panel" },
 ];

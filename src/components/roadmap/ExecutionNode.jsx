@@ -1,20 +1,13 @@
 /**
- * @fileoverview ExecutionNode — v3 Visual Redesign
+ * @fileoverview ExecutionNode — v4 Neural Engine Redesign
  *
  * Philosophy: "professional tool, not a game"
- * Inspired by Linear / n8n / Vercel dashboard aesthetic — dark, clean, fast.
- *
- * Performance improvements vs v2:
- *  - Width 300px (was 420px) → 40% more nodes visible in viewport
- *  - Removed backdrop-blur-2xl (was the #1 GPU bottleneck)
- *  - Removed SVG progress ring (replaced with 2px bottom bar)
- *  - Removed glow box-shadows from non-selected state
- *  - Simplified DOM: 3 fewer nesting levels
- *  - No inline filter: computations
- *  - All functionality preserved (handles, resize, collapse, tasks, tags, deadline, assets, delegates)
+ * Now fully decoupled from UI-based state. Driven strictly by the
+ * DAG Compiler (graphEngine.js). Features native time-locks,
+ * backoff penalties, and verification ghost states.
  */
 
-import React, { useState, memo } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { Handle, Position, NodeResizer } from "reactflow";
 import {
   Check,
@@ -24,10 +17,16 @@ import {
   Zap,
   ShieldCheck,
   AlertTriangle,
-  Users,
+  Lock,
+  Clock,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "../ui/BentoCard";
-import { NODE_ACCENT_PALETTE } from "../../lib/roadmap/constants.js";
+import {
+  NODE_ACCENT_PALETTE,
+  NODE_STATES,
+} from "../../lib/roadmap/constants.js";
 import { useRoadmap } from "../../contexts/RoadmapContext.jsx";
 
 // ── Handle style (invisible hit area with visible dot) ────────────────────────
@@ -42,66 +41,123 @@ const HANDLE_STYLE = {
 const HANDLE_HOVER_CLS =
   "hover:!scale-150 transition-transform before:absolute before:-inset-5 before:content-[''] before:z-50 relative";
 
+// ── Time formatting utility for brutalist timers ──────────────────────────────
+const formatMonospaceTime = (ms) => {
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (totalSeconds % 60).toString().padStart(2, "0");
+  if (h > 0) return `${h}:${m}:${s}`;
+  return `${m}:${s}`;
+};
+
 export const ExecutionNode = memo(
   ({ data, selected, id, style: nodeStyle }) => {
     const [collapsed, setCollapsed] = useState(data.collapsed ?? false);
     const { toggleNodeCollapse, setActiveEditNodeId } = useRoadmap();
 
-    // ── Derived state ──────────────────────────────────────────────────────────
-    const isCompleted = !!data.isCompleted;
-    const isOverdue =
-      !isCompleted && data.deadline && new Date(data.deadline) < new Date();
-    const isActive =
-      data.priorityStatus === "READY" && !isCompleted && !isOverdue;
-    const isFuture =
-      data.priorityStatus === "FUTURE" && !isCompleted && !isOverdue;
+    // ── Strict Engine State Parsing ──────────────────────────────────────────────
+    // Fallback maps legacy data to the new engine states if graphEngine is unmounted
+    const computedState =
+      data._computed?.state ||
+      (data.isCompleted ? NODE_STATES.VERIFIED : NODE_STATES.ACTIVE);
+    const baseTimeRemaining = data._computed?.timeRemaining || 0;
 
+    // ── Local Ticker for Active Locks & Penalties ───────────────────────────────
+    const [timeLeft, setTimeLeft] = useState(baseTimeRemaining);
+
+    useEffect(() => {
+      setTimeLeft(baseTimeRemaining);
+    }, [baseTimeRemaining]);
+
+    useEffect(() => {
+      if (timeLeft <= 0) return;
+      const interval = setInterval(() => {
+        setTimeLeft((prev) => Math.max(0, prev - 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }, [timeLeft]);
+
+    // ── Derived State Checks ───────────────────────────────────────────────────
+    const isLocked = computedState === NODE_STATES.LOCKED;
+    const isVerified =
+      computedState === NODE_STATES.VERIFIED ||
+      computedState === NODE_STATES.VERIFIED_GHOST;
+    const isBackoff = computedState === NODE_STATES.FAILED_BACKOFF;
+    const isVerifying = computedState === NODE_STATES.VERIFYING;
+    const isInProgress = computedState === NODE_STATES.IN_PROGRESS;
+    const isActive = computedState === NODE_STATES.ACTIVE;
+
+    const isOverdue =
+      !isVerified && data.deadline && new Date(data.deadline) < new Date();
     const accent = NODE_ACCENT_PALETTE[data.accentColor || "amber"];
 
     const tasks = data.tasks || [];
     const doneTasks = tasks.filter((t) => t.completed).length;
-    const progress =
-      tasks.length > 0
-        ? Math.round((doneTasks / tasks.length) * 100)
-        : isCompleted
-          ? 100
-          : 0;
 
-    // ── Status ─────────────────────────────────────────────────────────────────
-    const statusColor = isCompleted
-      ? "#10b981"
-      : isOverdue
-        ? "#ef4444"
-        : isActive
-          ? accent.primary
-          : "rgba(255,255,255,0.2)";
+    // ── Brutalist State Mapping ────────────────────────────────────────────────
+    let statusColor, statusLabel, accentBarColor;
 
-    const statusLabel = isCompleted
-      ? "Done"
-      : isOverdue
-        ? "Overdue"
-        : isActive
-          ? "Active"
-          : "Pending";
+    switch (computedState) {
+      case NODE_STATES.LOCKED:
+        statusColor = "rgba(255,255,255,0.2)";
+        statusLabel = "Locked";
+        accentBarColor = "#222";
+        break;
+      case NODE_STATES.ACTIVE:
+        statusColor = accent.primary;
+        statusLabel = "Ready";
+        accentBarColor = accent.primary;
+        break;
+      case NODE_STATES.IN_PROGRESS:
+        statusColor = accent.primary;
+        statusLabel = "In Progress";
+        accentBarColor = accent.primary;
+        break;
+      case NODE_STATES.VERIFYING:
+        statusColor = "#f59e0b"; // System Amber
+        statusLabel = "Verifying...";
+        accentBarColor = "#f59e0b";
+        break;
+      case NODE_STATES.FAILED_BACKOFF:
+        statusColor = "#ef4444"; // System Crimson
+        statusLabel = "Penalty Lock";
+        accentBarColor = "#ef4444";
+        break;
+      case NODE_STATES.VERIFIED:
+      case NODE_STATES.VERIFIED_GHOST:
+        statusColor = "#10b981"; // System Emerald
+        statusLabel = "Verified";
+        accentBarColor = "#10b981";
+        break;
+      default:
+        statusColor = "rgba(255,255,255,0.2)";
+        statusLabel = "Pending";
+        accentBarColor = "#333";
+    }
 
-    const accentBarColor = isCompleted
-      ? "#10b981"
-      : isOverdue
-        ? "#ef4444"
-        : accent.primary;
+    if (isOverdue && !isVerified && !isLocked && !isBackoff) {
+      statusColor = "#ef4444";
+      statusLabel = "Overdue";
+    }
 
-    // ── Node dimensions ────────────────────────────────────────────────────────
+    // ── Node dimensions & UI Computation ───────────────────────────────────────
     const nodeWidth = nodeStyle?.width ?? 300;
     const nodeHeight = nodeStyle?.height ?? "auto";
 
-    // ── Border & shadow ────────────────────────────────────────────────────────
     const borderColor = selected
-      ? `${accentBarColor}55`
-      : "rgba(255,255,255,0.07)";
+      ? `${accentBarColor}80`
+      : isBackoff
+        ? `${statusColor}40`
+        : "rgba(255,255,255,0.07)";
 
     const nodeShadow = selected
       ? `0 4px 20px rgba(0,0,0,0.8), 0 0 0 1px ${accentBarColor}25`
-      : "0 1px 6px rgba(0,0,0,0.5)";
+      : isBackoff
+        ? `0 0 15px ${statusColor}15`
+        : "0 1px 6px rgba(0,0,0,0.5)";
 
     return (
       <div
@@ -110,8 +166,9 @@ export const ExecutionNode = memo(
         aria-selected={selected}
         className={cn(
           "relative flex flex-col overflow-hidden transition-all duration-200",
-          data.isDimmed && "opacity-15 grayscale pointer-events-none",
-          isFuture && !selected && !data.isDimmed && "opacity-50",
+          (data.isDimmed || isLocked) &&
+            "opacity-40 grayscale pointer-events-none",
+          isBackoff && "animate-pulse",
           selected ? "scale-[1.012] z-50" : "z-10",
         )}
         style={{
@@ -123,7 +180,6 @@ export const ExecutionNode = memo(
           background: "#0d0d12",
           border: `1px solid ${borderColor}`,
           boxShadow: nodeShadow,
-          transition: "box-shadow 0.2s, border-color 0.2s, transform 0.15s",
         }}
         onClick={() => setActiveEditNodeId(id)}
       >
@@ -132,9 +188,7 @@ export const ExecutionNode = memo(
           minWidth={220}
           minHeight={100}
           isVisible={selected}
-          lineStyle={{
-            border: `1px dashed ${accent.primary}50`,
-          }}
+          lineStyle={{ border: `1px dashed ${accent.primary}50` }}
           handleStyle={{
             backgroundColor: accent.primary,
             width: 7,
@@ -150,44 +204,32 @@ export const ExecutionNode = memo(
           position={Position.Top}
           id="top"
           className={HANDLE_HOVER_CLS}
-          style={{
-            ...HANDLE_STYLE,
-            borderColor: `${accent.primary}60`,
-          }}
+          style={{ ...HANDLE_STYLE, borderColor: `${accent.primary}60` }}
         />
         <Handle
           type="target"
           position={Position.Left}
           id="left"
           className={HANDLE_HOVER_CLS}
-          style={{
-            ...HANDLE_STYLE,
-            borderColor: `${accent.primary}60`,
-          }}
+          style={{ ...HANDLE_STYLE, borderColor: `${accent.primary}60` }}
         />
         <Handle
           type="source"
           position={Position.Bottom}
           id="bottom"
           className={HANDLE_HOVER_CLS}
-          style={{
-            ...HANDLE_STYLE,
-            borderColor: `${accent.primary}60`,
-          }}
+          style={{ ...HANDLE_STYLE, borderColor: `${accent.primary}60` }}
         />
         <Handle
           type="source"
           position={Position.Right}
           id="right"
           className={HANDLE_HOVER_CLS}
-          style={{
-            ...HANDLE_STYLE,
-            borderColor: `${accent.primary}60`,
-          }}
+          style={{ ...HANDLE_STYLE, borderColor: `${accent.primary}60` }}
         />
 
         {/* ══════════════════════════════════════════════════════════════════
-          TOP ACCENT BAR — the brand/identity line
+          TOP ACCENT BAR — State driven identity line
       ══════════════════════════════════════════════════════════════════ */}
         <div
           style={{
@@ -206,23 +248,34 @@ export const ExecutionNode = memo(
           className="pointer-events-none select-none"
           style={{ padding: "10px 12px 10px" }}
         >
-          {/* ── Header row ──────────────────────────────────────────────── */}
+          {/* ── Header row: Status + Time Locks ─────────────────────────────── */}
           <div className="flex items-center justify-between mb-2">
-            {/* Status dot + label */}
             <div className="flex items-center gap-1.5">
-              <div
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: statusColor,
-                  boxShadow:
-                    isActive && !isCompleted
-                      ? `0 0 4px ${accent.primary}80`
-                      : undefined,
-                  flexShrink: 0,
-                }}
-              />
+              {isLocked ? (
+                <Lock style={{ width: 10, height: 10, color: statusColor }} />
+              ) : isVerifying ? (
+                <RefreshCw
+                  className="animate-spin"
+                  style={{ width: 10, height: 10, color: statusColor }}
+                />
+              ) : isBackoff ? (
+                <AlertCircle
+                  style={{ width: 10, height: 10, color: statusColor }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: statusColor,
+                    boxShadow:
+                      isActive || isInProgress
+                        ? `0 0 4px ${statusColor}80`
+                        : undefined,
+                  }}
+                />
+              )}
               <span
                 className="text-[9px] font-black uppercase tracking-widest"
                 style={{ color: `${statusColor}b0` }}
@@ -231,7 +284,6 @@ export const ExecutionNode = memo(
               </span>
             </div>
 
-            {/* Right: type + deadline + collapse */}
             <div className="flex items-center gap-2">
               {data.nodeType && (
                 <span className="text-[8px] font-bold uppercase tracking-widest text-white/20">
@@ -239,29 +291,39 @@ export const ExecutionNode = memo(
                 </span>
               )}
 
-              {data.deadline && (
+              {/* Native Countdown Timer / Date Tracker */}
+              {timeLeft > 0 && (isInProgress || isBackoff) ? (
                 <span
-                  className={cn(
-                    "flex items-center gap-0.5 text-[8px] font-semibold",
-                    isOverdue && !isCompleted
-                      ? "text-rose-400/70"
-                      : "text-white/25",
-                  )}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-[9px] font-bold font-mono tracking-wider"
+                  style={{ color: statusColor }}
                 >
-                  <CalendarIcon className="w-2.5 h-2.5" />
-                  {new Date(data.deadline).toLocaleDateString([], {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                  {isOverdue && !isCompleted && (
-                    <AlertTriangle className="w-2.5 h-2.5 ml-0.5" />
-                  )}
+                  <Clock className="w-2.5 h-2.5" />{" "}
+                  {formatMonospaceTime(timeLeft)}
                 </span>
+              ) : (
+                data.deadline && (
+                  <span
+                    className={cn(
+                      "flex items-center gap-0.5 text-[8px] font-semibold",
+                      isOverdue && !isVerified
+                        ? "text-rose-400/70"
+                        : "text-white/25",
+                    )}
+                  >
+                    <CalendarIcon className="w-2.5 h-2.5" />
+                    {new Date(data.deadline).toLocaleDateString([], {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    {isOverdue && !isVerified && (
+                      <AlertTriangle className="w-2.5 h-2.5 ml-0.5" />
+                    )}
+                  </span>
+                )
               )}
 
               <button
                 aria-label={collapsed ? "Expand node" : "Collapse node"}
-                aria-expanded={!collapsed}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -269,7 +331,7 @@ export const ExecutionNode = memo(
                   setCollapsed(next);
                   toggleNodeCollapse(id, next);
                 }}
-                className="pointer-events-auto w-5 h-5 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors focus-visible:ring-1 focus-visible:ring-amber-500 focus-visible:outline-none rounded"
+                className="pointer-events-auto w-5 h-5 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors focus-visible:ring-1 focus-visible:ring-amber-500 rounded"
               >
                 {collapsed ? (
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -280,16 +342,15 @@ export const ExecutionNode = memo(
             </div>
           </div>
 
-          {/* ── Title ───────────────────────────────────────────────────── */}
+          {/* ── Title & Subtitle ────────────────────────────────────────── */}
           <h3
             className="font-bold leading-snug mb-0.5"
             style={{
               fontSize: 14,
-              color: isCompleted
+              color: isVerified
                 ? "rgba(255,255,255,0.35)"
                 : "rgba(255,255,255,0.92)",
-              textDecoration: isCompleted ? "line-through" : "none",
-              // Long titles wrap cleanly
+              textDecoration: isVerified ? "line-through" : "none",
               wordBreak: "break-word",
               hyphens: "auto",
             }}
@@ -297,7 +358,6 @@ export const ExecutionNode = memo(
             {data.title || "Unnamed Protocol"}
           </h3>
 
-          {/* ── Subtitle ────────────────────────────────────────────────── */}
           {data.subtitle && (
             <p
               className="mb-2 truncate"
@@ -307,10 +367,9 @@ export const ExecutionNode = memo(
             </p>
           )}
 
-          {/* ── Expanded content ─────────────────────────────────────────── */}
+          {/* ── Expanded content (Tasks & Tags preserved perfectly) ─────── */}
           {!collapsed && (
             <>
-              {/* Description snippet */}
               {data.desc && (
                 <p
                   className="mb-2.5 line-clamp-2 leading-relaxed"
@@ -320,7 +379,6 @@ export const ExecutionNode = memo(
                 </p>
               )}
 
-              {/* Tags */}
               {data.tags?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2.5">
                   {data.tags.slice(0, 5).map((tag) => (
@@ -338,7 +396,6 @@ export const ExecutionNode = memo(
                 </div>
               )}
 
-              {/* Tasks */}
               {tasks.length > 0 && (
                 <div className="space-y-1 mb-2">
                   {tasks.slice(0, 5).map((task, i) => (
@@ -346,7 +403,6 @@ export const ExecutionNode = memo(
                       key={task.id || i}
                       className="flex items-start gap-1.5"
                     >
-                      {/* Checkbox */}
                       <div
                         className="shrink-0 flex items-center justify-center"
                         style={{
@@ -366,7 +422,6 @@ export const ExecutionNode = memo(
                           />
                         )}
                       </div>
-
                       <span
                         className="flex-1 leading-snug"
                         style={{
@@ -385,7 +440,6 @@ export const ExecutionNode = memo(
                           </em>
                         )}
                       </span>
-
                       {(task.points ?? 0) > 0 && (
                         <div
                           className="shrink-0 flex items-center gap-0.5"
@@ -401,7 +455,6 @@ export const ExecutionNode = memo(
                       )}
                     </div>
                   ))}
-
                   {tasks.length > 5 && (
                     <p
                       className="pl-5"
@@ -413,7 +466,6 @@ export const ExecutionNode = memo(
                 </div>
               )}
 
-              {/* Footer meta: linked assets + delegates */}
               {(data.linkedAssets?.length > 0 ||
                 data.delegates?.length > 0) && (
                 <div
@@ -440,7 +492,6 @@ export const ExecutionNode = memo(
                       </span>
                     </div>
                   )}
-
                   {data.delegates?.length > 0 && (
                     <div className="flex items-center gap-0.5">
                       {data.delegates.slice(0, 4).map((d, i) => (
@@ -463,17 +514,6 @@ export const ExecutionNode = memo(
                           {d.charAt(0).toUpperCase()}
                         </div>
                       ))}
-                      {data.delegates.length > 4 && (
-                        <span
-                          style={{
-                            fontSize: 8,
-                            color: "rgba(255,255,255,0.2)",
-                            marginLeft: 2,
-                          }}
-                        >
-                          +{data.delegates.length - 4}
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>
@@ -483,68 +523,17 @@ export const ExecutionNode = memo(
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-          PROGRESS FOOTER — thin 2px bottom bar + percentage
+          ENGINE FOOTER — Removed arbitrary progress, strictly enforces state
       ══════════════════════════════════════════════════════════════════ */}
-        {(tasks.length > 0 || isCompleted) && (
-          <>
-            {/* Track */}
-            <div
-              style={{
-                height: 2,
-                background: "rgba(255,255,255,0.04)",
-                flexShrink: 0,
-                position: "relative",
-              }}
-            >
-              {/* Fill */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  height: "100%",
-                  width: `${progress}%`,
-                  background: accentBarColor,
-                  opacity: 0.8,
-                  transition: "width 0.6s ease",
-                  borderRadius: "0 1px 1px 0",
-                }}
-              />
+        {!collapsed && computedState === NODE_STATES.ACTIVE && (
+          <div className="mt-auto border-t border-white/5 bg-white/[0.02] px-3 py-2 flex justify-between items-center">
+            <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">
+              Dependencies Met
+            </span>
+            <div className="text-[9px] font-bold text-white/50 animate-pulse">
+              Awaiting Initialization
             </div>
-
-            {/* % label row — only when expanded and has tasks */}
-            {!collapsed && tasks.length > 0 && (
-              <div
-                className="flex items-center justify-between"
-                style={{
-                  padding: "4px 12px 6px",
-                  borderTop: "none",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 8,
-                    fontWeight: 700,
-                    color: "rgba(255,255,255,0.18)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  {doneTasks}/{tasks.length} tasks
-                </span>
-                <span
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 800,
-                    fontFamily: "monospace",
-                    color: `${accentBarColor}80`,
-                  }}
-                >
-                  {progress}%
-                </span>
-              </div>
-            )}
-          </>
+          </div>
         )}
       </div>
     );

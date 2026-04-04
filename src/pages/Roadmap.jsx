@@ -32,24 +32,25 @@ import { db, auth } from "../firebase";
 import { useUserData } from "../hooks/useUserData";
 import { useMapHistory } from "../lib/roadmap/useMapHistory.js";
 import { idbPut, idbGet, idbClear } from "../lib/roadmap/idb.js";
-import { generateNeuralLayout } from "../lib/roadmap/layout.js";
+import { getLayoutedElements } from "../lib/roadmap/layout.js";
 import { sanitize } from "../lib/roadmap/sanitize.js";
 import {
   SAVE_DEBOUNCE_MS,
   TIER_LIMITS,
   EDGE_KEYFRAMES,
 } from "../lib/roadmap/constants.js";
-import { RoadmapContext } from "../contexts/RoadmapContext.jsx";
-import { mutateScore } from "../lib/scoreEngine";
 import {
-  generateCalibrationQuestions,
-  generateExecutionMap,
-} from "../lib/gemini";
+  RoadmapContext,
+  useNeuralEngine,
+} from "../contexts/RoadmapContext.jsx";
+import { mutateScore } from "../lib/scoreEngine";
+import { generateExecutionMap } from "../lib/gemini";
 import {
   fetchCertificatesForGemini,
   fetchVideosForGemini,
 } from "../lib/discotiveLearn";
 import AILoader from "../components/AILoader";
+import { useAIGateway } from "../hooks/useAIGateway.js";
 
 import { FlowCanvas } from "../components/roadmap/FlowCanvas.jsx";
 import { NodeEditPanel } from "../components/roadmap/NodeEditPanel.jsx";
@@ -180,6 +181,10 @@ const Roadmap = () => {
     (delta) => setPendingScoreDelta((p) => p + delta),
     [],
   );
+
+  // ── INJECT THE ENTERPRISE ENGINES ──
+  const { requestMapGeneration } = useAIGateway({ addToast });
+  const { forceEvaluate } = useNeuralEngine(edges2, setNodes2);
 
   // ── Context actions ────────────────────────────────────────────────────────
   const toggleNodeCollapse = useCallback((nodeId, collapsed) => {
@@ -477,61 +482,46 @@ const Roadmap = () => {
   const handleAiSubmit = useCallback(async () => {
     setAiPhase("generating");
     try {
-      // Fetch Learn inventory for Gemini context
-      const [videos, certificates] = await Promise.all([
-        fetchVideosForGemini(
-          userData?.identity?.domain || userData?.vision?.passion,
-        ).catch(() => []),
-        fetchCertificatesForGemini(
-          userData?.identity?.domain || userData?.vision?.passion,
-        ).catch(() => []),
-      ]);
+      // 1. Compile the prompt
+      const compiledPrompt = Object.entries(aiAnswers)
+        .map(([idx, ans]) => `Q${parseInt(idx) + 1}: ${ans}`)
+        .join(" | ");
 
-      const rawResult = await generateExecutionMap(
-        userData,
-        aiAnswers,
-        subscriptionTier,
-        { videos, certificates },
-      );
+      // 2. Pass through the Financial Firewall
+      const payload = await requestMapGeneration(compiledPrompt, "NEW");
 
-      // Handle both array and {nodes, edges} return shapes
-      const newNodes = Array.isArray(rawResult)
-        ? rawResult.filter(
-            (n) =>
-              n.type === "executionNode" ||
-              n.type === "videoWidget" ||
-              n.type === "assetWidget" ||
-              n.type === "milestoneNode" ||
-              n.type === "radarWidget" ||
-              n.type === "journalNode" ||
-              n.type === "groupNode" ||
-              n.type === "connectorNode",
-          )
-        : rawResult.nodes || [];
-      const newEdges = Array.isArray(rawResult) ? [] : rawResult.edges || [];
+      if (payload && payload.nodes) {
+        const rawNodes = payload.nodes.map((n) => ({
+          ...n,
+          data: { ...n.data, _freshlyGenerated: true },
+        }));
+        const rawEdges = payload.edges || [];
 
-      const marked = newNodes.map((n) => ({
-        ...n,
-        data: { ...n.data, _freshlyGenerated: true },
-      }));
-      const laidOut = generateNeuralLayout(marked, newEdges);
+        // 3. Apply the Dagre Math Layout
+        const { layoutedNodes } = getLayoutedElements(rawNodes, rawEdges, "LR");
 
-      setNodes2(laidOut);
-      setEdges2(newEdges);
-      setHasUnsavedChanges(true);
-      setAiPhase("done");
-      setShowCalibrationOverlay(false);
-      hasInitializedBefore.current = true;
-      try {
-        localStorage.setItem("discotive_initialized_v6", "true");
-      } catch (_) {}
-      addToast(`${laidOut.length} nodes generated. Review and save.`, "green");
+        setNodes2(layoutedNodes);
+        setEdges2(rawEdges);
+        setHasUnsavedChanges(true);
+
+        // 4. Force the Neural Engine to compile time-locks and states
+        forceEvaluate();
+
+        setAiPhase("done");
+        setShowCalibrationOverlay(false);
+        hasInitializedBefore.current = true;
+        try {
+          localStorage.setItem("discotive_initialized_v6", "true");
+        } catch (_) {}
+      } else {
+        throw new Error("Invalid payload returned from secure gateway.");
+      }
     } catch (err) {
       console.error("[Roadmap] AI generation failed:", err);
       addToast("AI generation failed. Try again.", "red");
       setAiPhase("questions");
     }
-  }, [userData, aiAnswers, subscriptionTier, addToast]);
+  }, [aiAnswers, requestMapGeneration, forceEvaluate, addToast]);
 
   // ── Node edit actions ──────────────────────────────────────────────────────
   const updateActiveNode = useCallback(
@@ -599,6 +589,7 @@ const Roadmap = () => {
       openVideoModal,
       openExplorerModal,
       markVideoWatched,
+      forceEvaluate,
     }),
     [
       addToast,
@@ -608,6 +599,7 @@ const Roadmap = () => {
       openVideoModal,
       openExplorerModal,
       markVideoWatched,
+      forceEvaluate,
     ],
   );
 

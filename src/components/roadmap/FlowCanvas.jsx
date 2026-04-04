@@ -15,7 +15,8 @@
  *   Arrow keys    pan canvas
  */
 
-import React, { useState, useEffect, useCallback, useRef, memo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { getLayoutedElements } from "../../lib/roadmap/layout";
 import ReactFlow, {
   Background,
   Controls,
@@ -48,6 +49,7 @@ import {
   Trash2,
   Copy,
   Palette,
+  Network,
 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
@@ -64,7 +66,6 @@ import {
 import { useRoadmap } from "../../contexts/RoadmapContext.jsx";
 
 // ─── Lazy node type registry (other node types imported on demand) ────────────
-// Kept here so FlowCanvas is self-contained. Non-critical nodes are memoized.
 import { AssetWidgetNode } from "./nodes/AssetWidgetNode.jsx";
 import { VideoWidgetNode } from "./nodes/VideoWidgetNode.jsx";
 import { JournalNode } from "./nodes/JournalNode.jsx";
@@ -72,6 +73,9 @@ import { MilestoneNode } from "./nodes/MilestoneNode.jsx";
 import { AppConnectorNode } from "./nodes/AppConnectorNode.jsx";
 import { GroupNode } from "./nodes/GroupNode.jsx";
 import { RadarWidgetNode } from "./nodes/RadarWidgetNode.jsx";
+
+import { LogicNode } from "./nodes/LogicNode.jsx";
+import { ComputeNode } from "./nodes/ComputeNode.jsx";
 
 const nodeTypes = {
   executionNode: ExecutionNode,
@@ -82,6 +86,8 @@ const nodeTypes = {
   milestoneNode: MilestoneNode,
   connectorNode: AppConnectorNode,
   groupNode: GroupNode,
+  logicGate: LogicNode, // <-- Added
+  computeNode: ComputeNode, // <-- Added
 };
 
 const clampMenu = (x, y, w = 260, h = 280) => ({
@@ -484,6 +490,22 @@ export const FlowCanvas = ({
     if (searchQ) setSearchQ("");
   }, [setActiveEditNodeId, setNodes, searchQ]);
 
+  // ── Auto Layout Engine ────────────────────────────────────────────────────
+  const applyAutoLayout = useCallback(() => {
+    setNodes((currentNodes) => {
+      // 1. Math computation
+      const { layoutedNodes } = getLayoutedElements(currentNodes, edges, "LR");
+      return layoutedNodes;
+    });
+
+    // 2. Mark as unsaved
+    setHasUnsavedChanges(true);
+    addToast("Neural auto-layout applied.", "grey");
+
+    // 3. Smooth camera follow
+    setTimeout(() => fitView({ duration: 800, padding: 0.3 }), 50);
+  }, [edges, setNodes, fitView, setHasUnsavedChanges, addToast]);
+
   // ── Export ────────────────────────────────────────────────────────────────
   const handleDownload = async (format) => {
     setDlOpen(false);
@@ -663,6 +685,16 @@ export const FlowCanvas = ({
 
       {/* ── HUD: RIGHT CLUSTER ── */}
       <div className="absolute top-4 right-4 md:top-5 md:right-5 z-[70] flex flex-col gap-2">
+        {/* <-- NEW: Auto Layout Trigger --> */}
+        <button
+          onClick={applyAutoLayout}
+          aria-label="Auto Layout"
+          title="Organize Neural Web"
+          className="w-10 h-10 bg-[#080808]/95 backdrop-blur-xl border border-amber-500/20 rounded-full text-amber-500 hover:text-white hover:bg-amber-500/20 transition-all shadow-2xl flex items-center justify-center focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+        >
+          <Network className="w-4 h-4" />
+        </button>
+
         <button
           onClick={() => fitView({ duration: 800, padding: 0.3 })}
           aria-label="Fit view"
@@ -986,6 +1018,8 @@ const PaneContextMenu = ({
       {[
         { label: "Execution Node", type: "executionNode" },
         { label: "Milestone", type: "milestoneNode" },
+        { label: "AI Compute Gate", type: "computeNode" },
+        { label: "Logic Gate (AND/OR)", type: "logicGate" },
         { label: "Journal Entry", type: "journalNode" },
         { label: "Asset Widget", type: "assetWidget" },
         { label: "Video Widget", type: "videoWidget" },

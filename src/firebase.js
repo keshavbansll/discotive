@@ -23,7 +23,7 @@ if (import.meta.env.DEV) {
 }
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 
 // Initialize App Check
 if (import.meta.env.PROD && import.meta.env.VITE_RECAPTCHA_KEY) {

@@ -1,7 +1,7 @@
 /**
  * @fileoverview Discotive Roadmap — Node Edit Panel (Dynamic Inspector)
  * Upgraded to morph based on node.type. Widgets get dedicated config forms,
- * Execution nodes get the full task/journal suite.
+ * Execution nodes get the full task/journal suite and Proof of Work submission.
  */
 
 import React, { useState, useEffect, useRef, memo, useMemo } from "react";
@@ -26,9 +26,14 @@ import {
   Lock,
 } from "lucide-react";
 import { cn } from "../ui/BentoCard";
-import { NODE_ACCENT_PALETTE, NODE_TAGS } from "../../lib/roadmap/constants.js";
+import {
+  NODE_ACCENT_PALETTE,
+  NODE_TAGS,
+  NODE_STATES,
+} from "../../lib/roadmap/constants.js";
 import { sanitize } from "../../lib/roadmap/sanitize.js";
 import { useRoadmap } from "../../contexts/RoadmapContext.jsx";
+import { useVerificationAPI } from "../../hooks/useVerificationAPI.js";
 
 const MOODS = [
   "⚡ In flow",
@@ -78,6 +83,7 @@ const getTabsForType = (type) => {
 export const NodeEditPanel = memo(
   ({
     node,
+    mapId,
     onUpdate,
     onDelete,
     onSubtaskToggle,
@@ -85,20 +91,29 @@ export const NodeEditPanel = memo(
     addToast,
   }) => {
     const { openVideoModal, setActiveEditNodeId } = useRoadmap();
+    const { submitPayload, isVerifying } = useVerificationAPI();
+
     const availableTabs = useMemo(() => getTabsForType(node.type), [node.type]);
     const [tab, setTab] = useState(availableTabs[0].id);
     const [delegateInput, setDelegateInput] = useState("");
+    const [payloadData, setPayloadData] = useState("");
     const titleRef = useRef(null);
 
     const isExecutionNode =
       !node.type ||
       node.type === "executionNode" ||
       node.type === "milestoneNode";
+
     const accent = NODE_ACCENT_PALETTE[node.data?.accentColor || "amber"];
     const tasks = node.data?.tasks || [];
     const doneTasks = tasks.filter((t) => t.completed).length;
     const totalTasks = tasks.length;
     const isCompleted = !!node.data?.isCompleted;
+
+    // Strict computed state for Verification
+    const computedState = node?.data?._computed?.state;
+    const isLocked = computedState === NODE_STATES?.LOCKED;
+    const isBackoff = computedState === NODE_STATES?.FAILED_BACKOFF;
 
     useEffect(() => {
       if (!availableTabs.find((t) => t.id === tab)) setTab(availableTabs[0].id);
@@ -115,6 +130,7 @@ export const NodeEditPanel = memo(
         ...tasks,
         { id: crypto.randomUUID(), text: "", completed: false, points: 10 },
       ]);
+
     const updateTaskText = (taskId, text) =>
       onUpdate(
         "tasks",
@@ -122,11 +138,13 @@ export const NodeEditPanel = memo(
           t.id === taskId ? { ...t, text: sanitize(text) } : t,
         ),
       );
+
     const removeTask = (taskId) =>
       onUpdate(
         "tasks",
         tasks.filter((t) => t.id !== taskId),
       );
+
     const completeAll = () => {
       onUpdate(
         "tasks",
@@ -135,11 +153,24 @@ export const NodeEditPanel = memo(
       onUpdate("isCompleted", true);
       addToast?.("All tasks secured. Protocol complete.", "green");
     };
+
     const addDelegate = () => {
       const val = delegateInput.trim();
       if (!val) return;
       onUpdate("delegates", [...(node.data.delegates || []), val]);
       setDelegateInput("");
+    };
+
+    const handleSubmission = async () => {
+      if (isLocked || isBackoff) return;
+      if (payloadData.trim().length < 5) return;
+
+      await submitPayload(node.id, mapId, {
+        type: "github_url",
+        content: payloadData,
+      });
+
+      setPayloadData("");
     };
 
     return (
@@ -680,6 +711,58 @@ export const NodeEditPanel = memo(
               >
                 <Plus className="w-3.5 h-3.5" /> Add Sub-Routine
               </button>
+
+              <hr className="border-[#1a1a1a] my-6" />
+
+              {/* ── VERIFICATION: PROOF OF WORK ── */}
+              <div>
+                <label className="block text-[9px] font-bold text-[#444] uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                  <Lock className="w-3 h-3 text-amber-500" /> Proof of Work
+                  Validation
+                </label>
+                <input
+                  type="text"
+                  value={payloadData}
+                  onChange={(e) => setPayloadData(e.target.value)}
+                  placeholder="Paste repository or asset link..."
+                  disabled={isVerifying || isLocked || isBackoff}
+                  className={cn(
+                    fieldInput,
+                    "mb-3 disabled:opacity-50 disabled:cursor-not-allowed",
+                  )}
+                  onFocus={handleAccentFocus}
+                  onBlur={handleAccentBlur}
+                />
+                <button
+                  onClick={handleSubmission}
+                  disabled={
+                    isVerifying ||
+                    isLocked ||
+                    isBackoff ||
+                    payloadData.length < 5
+                  }
+                  className={cn(
+                    "w-full py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center disabled:cursor-not-allowed",
+                    isVerifying
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse"
+                      : isBackoff
+                        ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                        : "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]",
+                  )}
+                >
+                  {isVerifying
+                    ? "Verifying via AI..."
+                    : isBackoff
+                      ? "System Locked"
+                      : "Submit Proof of Work"}
+                </button>
+
+                {isBackoff && (
+                  <p className="text-rose-500 text-[10px] text-center mt-3 font-mono bg-rose-500/10 py-2 rounded-lg border border-rose-500/20">
+                    Penalty active. Review constraints & await timer bypass.
+                  </p>
+                )}
+              </div>
             </>
           )}
 
